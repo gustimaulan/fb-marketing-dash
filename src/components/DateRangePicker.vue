@@ -35,18 +35,18 @@
     </div>
 
     <!-- Custom Date Range Inputs -->
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap md:flex-nowrap items-center gap-2">
       <input
         :value="startDate"
         type="date"
-        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+        class="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
         @change="handleStartDateChange"
       />
       <span class="text-gray-500">to</span>
       <input
         :value="endDate"
         type="date"
-        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+        class="block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
         @change="handleEndDateChange"
       />
     </div>

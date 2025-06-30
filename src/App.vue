@@ -184,6 +184,7 @@ onMounted(() => {
           :formatValue="formatValue"
           @handleSort="handleSort"
           @moveColumn="moveColumn"
+          @toggleColumn="(key) => columnConfig[key].visible = !columnConfig[key].visible"
         />
       </div>
 

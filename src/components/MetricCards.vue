@@ -1,22 +1,22 @@
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+  <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
     <div 
       v-for="metric in metricCards"
       :key="metric.key"
-      class="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+      class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6"
     >
-      <div class="flex items-center">
+      <div class="flex items-center space-x-4">
         <div class="flex-shrink-0">
-          <div :class="['w-8 h-8 rounded-md flex items-center justify-center', metric.bgColor]">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div :class="['w-10 h-10 sm:w-8 sm:h-8 rounded-md flex items-center justify-center', metric.bgColor]">
+            <svg class="w-6 h-6 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="metric.iconPath" />
             </svg>
           </div>
         </div>
-        <div class="ml-5 w-0 flex-1">
+        <div class="min-w-0 flex-1">
           <dl>
             <dt class="text-sm font-medium text-gray-500 truncate">{{ metric.label }}</dt>
-            <dd class="text-lg font-medium text-gray-900">{{ formatMetricValue(metric.key, metrics[metric.key]) }}</dd>
+            <dd class="text-xl sm:text-lg font-semibold text-gray-900 mt-1">{{ formatMetricValue(metric.key, metrics[metric.key]) }}</dd>
           </dl>
         </div>
       </div>
@@ -71,7 +71,7 @@ const metricCards = [
       key: 'add_to_cart',
       label: 'Add to Cart',
       bgColor: 'bg-orange-500',
-      iconPath: 'M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01'
+      iconPath: 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17'
     },
     {
       key: 'purchases',
