@@ -97,7 +97,7 @@
           <div class="flex items-center justify-between mb-6">
             <div>
               <h4 class="text-xl font-bold text-gray-900">{{ branchData.branchName }}</h4>
-              <p class="text-sm text-gray-600">{{ formatPercentage(branchData.percentage) }} of total ad spend allocation</p>
+              <p class="text-sm text-gray-600">{{ branchData.percentage }}% of total ad spend allocation</p>
             </div>
             <div class="text-right">
               <div class="px-3 py-1 rounded-full text-sm font-medium"
@@ -485,9 +485,9 @@ const getBudgetRecommendationClass = (branchData) => {
   const avgCostPerOrder = totalBudget.value / props.branchPerformanceData.reduce((sum, branch) => sum + (branch.metrics.sales_order.orders || 0), 0)
   const trackingAccuracy = getAccuracyPercentage(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue)
   
-  if (salesOrderROAS > overallROAS.value * 1.2 && salesOrderCostPerOrder <= avgCostPerOrder && trackingAccuracy >= 70) {
+  if (salesOrderROAS > overallROAS.value * 1.2 && salesOrderCostPerOrder <= avgCostPerOrder && trackingAccuracy >= 0.7) {
     return 'bg-green-50 border border-green-200'
-  } else if (salesOrderROAS < overallROAS.value * 0.8 || salesOrderCostPerOrder > avgCostPerOrder * 1.5 || trackingAccuracy < 50) {
+  } else if (salesOrderROAS < overallROAS.value * 0.8 || salesOrderCostPerOrder > avgCostPerOrder * 1.5 || trackingAccuracy < 0.5) {
     return 'bg-red-50 border border-red-200'
   } else {
     return 'bg-yellow-50 border border-yellow-200'
@@ -500,9 +500,9 @@ const getBudgetRecommendationTextClass = (branchData) => {
   const avgCostPerOrder = totalBudget.value / props.branchPerformanceData.reduce((sum, branch) => sum + (branch.metrics.sales_order.orders || 0), 0)
   const trackingAccuracy = getAccuracyPercentage(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue)
   
-  if (salesOrderROAS > overallROAS.value * 1.2 && salesOrderCostPerOrder <= avgCostPerOrder && trackingAccuracy >= 70) {
+  if (salesOrderROAS > overallROAS.value * 1.2 && salesOrderCostPerOrder <= avgCostPerOrder && trackingAccuracy >= 0.7) {
     return 'text-green-800'
-  } else if (salesOrderROAS < overallROAS.value * 0.8 || salesOrderCostPerOrder > avgCostPerOrder * 1.5 || trackingAccuracy < 50) {
+  } else if (salesOrderROAS < overallROAS.value * 0.8 || salesOrderCostPerOrder > avgCostPerOrder * 1.5 || trackingAccuracy < 0.5) {
     return 'text-red-800'
   } else {
     return 'text-yellow-800'
@@ -528,7 +528,7 @@ const getBudgetRecommendation = (branchData) => {
     return `OPTIMIZE cost efficiency. High actual cost per order (${formatCurrency(salesOrderCostPerOrder)} vs avg ${formatCurrency(avgCostPerOrder)}).`
   } else if (salesOrderOrders < 5) {
     return `MONITOR closely. Limited actual order volume (${salesOrderOrders}). Review tracking and conversion funnel.`
-  } else if (trackingAccuracy < 70) {
+  } else if (trackingAccuracy < 0.7) {
     return `IMPROVE TRACKING. Low accuracy (${formatPercentage(trackingAccuracy)}). FB data unreliable for this branch.`
   } else {
     return `MAINTAIN current allocation. Acceptable performance with ${formatNumber(salesOrderROAS, 2)}x actual ROAS.`
