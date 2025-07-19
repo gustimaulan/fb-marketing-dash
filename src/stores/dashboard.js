@@ -7,7 +7,7 @@ import {
   filterDataByDateRange, 
   getProductOptions,
   userPreferences,
-  cacheManager
+  metaAdsCacheManager
 } from '../api/dashboard.js'
 import { 
   fetchSalesOrders, 
@@ -795,9 +795,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const initializeDashboard = () => {
     console.log('🚀 Initializing Dashboard...')
     
-    // Clear any stale caches first
-    clearAllCaches()
-    
     // Load user preferences first
     loadPreferences()
     
@@ -850,7 +847,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   // Cache management utilities
   const getCacheInfo = () => {
     return {
-      fbAds: cacheManager.getInfo(),
+      fbAds: metaAdsCacheManager.getInfo(),
       salesOrders: salesOrderCacheManager.getCacheInfo()
     }
   }
@@ -859,7 +856,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     console.log('🧹 Clearing ALL caches completely...')
     
     // Clear Pinia cache managers
-    cacheManager.clearAll()
+    metaAdsCacheManager.clearAll()
     salesOrderCacheManager.clearAll()
     
     // Clear ALL localStorage dashboard entries
@@ -878,10 +875,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
   
   const refreshData = () => {
     console.log('Refreshing all data...')
-    cacheManager.refresh()
-    
-    // Refresh sales orders if date range is available
     if (startDate.value && endDate.value) {
+      metaAdsCacheManager.refresh(startDate.value, endDate.value)
       salesOrderCacheManager.refresh(startDate.value, endDate.value)
     }
   }

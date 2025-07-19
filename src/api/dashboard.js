@@ -1,16 +1,14 @@
-// API functions for dashboard data fetching with enhanced caching
+// API functions for meta-ads-data fetching with enhanced caching
+const META_ADS_API = import.meta.env.VITE_DASHBOARD_API_URL || 'https://workflows.cekat.ai/webhook/meta-ads-data'
 
-// Use environment variables for API endpoints
-const API_BASE_URL = import.meta.env.VITE_DASHBOARD_API_URL || 'https://workflows.cekat.ai/webhook/meta-ads-data'
-
-// In-memory cache for request deduplication
+// Caching configuration
+const CACHE_DURATION = 4 * 60 * 60 * 1000 // 4 hours - same as other APIs
 const requestCache = new Map()
-const CACHE_DURATION = 4 * 60 * 60 * 1000 // 4 hours - data updates daily at 4 AM
 
-// Browser storage utilities
+// Storage keys for meta ads caching
 const STORAGE_KEYS = {
-  DASHBOARD_DATA: 'dashboard_data',
-  CACHE_TIMESTAMP: 'dashboard_cache_timestamp',
+  META_ADS_DATA: 'meta_ads_data',
+  META_ADS_CACHE_TIMESTAMP: 'meta_ads_cache_timestamp',
   USER_PREFERENCES: 'user_preferences'
 }
 
@@ -61,177 +59,233 @@ const transformApiData = (data) => {
     
     // Handle date fields - ensure consistent format
     if (transformed.date_start) {
-      // Convert ISO format to YYYY-MM-DD if needed
-      if (transformed.date_start.includes('T')) {
-        transformed.date_start = transformed.date_start.split('T')[0]
-      }
+      // Keep ISO format as-is for compatibility
+      // transformed.date_start = transformed.date_start.split('T')[0]
     }
     
     if (transformed.date_stop) {
-      // Convert ISO format to YYYY-MM-DD if needed
-      if (transformed.date_stop.includes('T')) {
-        transformed.date_stop = transformed.date_stop.split('T')[0]
-      }
+      // Keep ISO format as-is for compatibility  
+      // transformed.date_stop = transformed.date_stop.split('T')[0]
     }
     
     return transformed
   })
 }
 
-// Cache utilities
-export const cacheUtils = {
-  // Store data in localStorage with compression
+// Cache manager for meta ads data (following salesOrders.js pattern)
+export const metaAdsCacheManager = {
+  // Get cache information for all meta ads caches
+  getCacheInfo: () => {
+    const cacheInfo = {}
+    
+    // Get all localStorage keys that start with 'meta_ads_'
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('meta_ads_')) {
+        const info = cacheUtils.getCacheInfo(key)
+        if (info) {
+          cacheInfo[key] = info
+        }
+      }
+    }
+    
+    return cacheInfo
+  },
+
+  // Clear all meta ads caches
+  clearAll: () => {
+    console.log('🧹 META ADS DEBUG: Clearing all meta ads caches...')
+    
+    // Clear localStorage caches
+    const keysToRemove = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('meta_ads_')) {
+        keysToRemove.push(key)
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key)
+    })
+    
+    // Clear in-memory cache
+    requestCache.clear()
+    
+    console.log(`✅ META ADS DEBUG: Cleared ${keysToRemove.length} meta ads caches`)
+  },
+
+  // Force refresh data for specific date range
+  refresh: async (dateFrom, dateTo) => {
+    console.log(`🔄 META ADS DEBUG: Refreshing meta ads data for ${dateFrom} to ${dateTo}...`)
+    
+    // Clear specific cache
+    const cacheKey = `meta_ads_${dateFrom}_${dateTo}`
+    cacheUtils.clearCache(cacheKey)
+    if (requestCache.has(cacheKey)) {
+      requestCache.delete(cacheKey)
+    }
+    
+    // Fetch fresh data
+    return await fetchMetaAdsWithCache(dateFrom, dateTo, { forceFresh: true })
+  },
+
+  // Get info for a specific cache key (for debugging)
+  getInfo: () => {
+    return metaAdsCacheManager.getCacheInfo()
+  }
+}
+
+// Cache utilities for meta ads data (following salesOrders.js pattern)
+const cacheUtils = {
   setCache: (key, data) => {
     try {
-      const cacheObject = {
+      const cacheData = {
         data,
-        timestamp: Date.now(),
-        version: '1.0' // For cache invalidation on structure changes
+        timestamp: Date.now()
       }
-      localStorage.setItem(key, JSON.stringify(cacheObject))
+      localStorage.setItem(key, JSON.stringify(cacheData))
+      console.log(`Meta ads data cached with key: ${key}`)
     } catch (error) {
-      console.warn('Cache storage failed:', error)
+      console.warn('Failed to cache meta ads data:', error)
     }
   },
 
-  // Retrieve data from localStorage with TTL check
-  getCache: (key, maxAge = CACHE_DURATION) => {
+  getCache: (key) => {
     try {
       const cached = localStorage.getItem(key)
       if (!cached) return null
 
-      const cacheObject = JSON.parse(cached)
-      const age = Date.now() - cacheObject.timestamp
-
-      if (age > maxAge) {
+      const { data, timestamp } = JSON.parse(cached)
+      if (Date.now() - timestamp > CACHE_DURATION) {
+        console.log('Meta ads cache expired, removing:', key)
         localStorage.removeItem(key)
         return null
       }
 
-      return cacheObject.data
+      console.log('Using cached meta ads data:', key)
+      return data
     } catch (error) {
-      console.warn('Cache retrieval failed:', error)
+      console.warn('Failed to read meta ads cache:', error)
       return null
     }
   },
 
-  // Clear specific cache entry
   clearCache: (key) => {
-    localStorage.removeItem(key)
-  },
-
-  // Clear all dashboard caches
-  clearAllCaches: () => {
-    Object.values(STORAGE_KEYS).forEach(key => {
+    try {
       localStorage.removeItem(key)
-    })
-    requestCache.clear()
+      console.log('Meta ads cache cleared:', key)
+    } catch (error) {
+      console.warn('Failed to clear meta ads cache:', error)
+    }
   },
 
-  // Get cache info for debugging
-  getCacheInfo: () => {
-    const info = {}
-    Object.entries(STORAGE_KEYS).forEach(([name, key]) => {
+  getCacheInfo: (key) => {
+    try {
       const cached = localStorage.getItem(key)
-      if (cached) {
-        try {
-          const cacheObject = JSON.parse(cached)
-          info[name] = {
-            size: cached.length,
-            timestamp: cacheObject.timestamp,
-            age: Date.now() - cacheObject.timestamp
-          }
-        } catch (error) {
-          info[name] = { error: 'Invalid cache data' }
-        }
+      if (!cached) return null
+
+      const { timestamp } = JSON.parse(cached)
+      const age = Date.now() - timestamp
+      const remaining = CACHE_DURATION - age
+
+      return {
+        exists: true,
+        age,
+        remaining: Math.max(0, remaining),
+        expired: remaining <= 0
       }
-    })
-    return info
+    } catch (error) {
+      return null
+    }
   }
 }
 
-// Enhanced fetch with caching and request deduplication
-const fetchWithCache = async (url, options = {}) => {
-  const cacheKey = `${url}_${JSON.stringify(options)}`
+// Enhanced fetch with caching for meta ads data (following salesOrders.js pattern)
+const fetchMetaAdsWithCache = async (dateFrom, dateTo, options = {}) => {
+  const cacheKey = `meta_ads_${dateFrom}_${dateTo}`
+  const url = `${META_ADS_API}?date-from=${dateFrom}&date-to=${dateTo}`
   
   // Check in-memory cache first (for request deduplication)
   if (requestCache.has(cacheKey)) {
     const cached = requestCache.get(cacheKey)
     if (Date.now() - cached.timestamp < 60000) { // 1 minute for request deduplication
-      console.log('Using in-memory cache for', url)
+      console.log('Using in-memory cache for meta ads:', cacheKey)
       return cached.data
     }
     requestCache.delete(cacheKey)
   }
 
-  // Check localStorage cache with URL-specific key
-  const urlCacheKey = `dashboard_${btoa(url).slice(0, 20)}` // Use URL hash as cache key
-  const cachedData = cacheUtils.getCache(urlCacheKey)
+  // Check localStorage cache
+  const cachedData = cacheUtils.getCache(cacheKey)
   if (cachedData && !options.forceFresh) {
-    console.log('Using localStorage cache for', url)
+    console.log('Using localStorage cache for meta ads:', cacheKey)
     return cachedData
   }
 
-  // Make fresh request - simplified to avoid CORS preflight
-  console.log('Making fresh API request to', url)
+  // Make fresh request
+  console.log('📡 META ADS DEBUG: Making fresh API request:', url)
   
   try {
-    // Simple GET request without custom headers to avoid preflight
     const response = await fetch(url)
-
+    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`)
     }
-
+    
     const result = await response.json()
     
-    console.log('Raw API response:', { 
+    console.log('📥 META ADS DEBUG: Raw API response structure:', {
       isArray: Array.isArray(result),
       length: Array.isArray(result) ? result.length : 'not array',
       firstItemKeys: Array.isArray(result) && result[0] ? Object.keys(result[0]) : 'no first item'
     })
     
-    // Handle new API response structure - API returns array with single object
+    // Handle the API response format which returns an array with a data property (same as salesOrders.js)
     let data = []
-    let responseObj = result
-    
-    // If response is array, get first item
-    if (Array.isArray(result) && result.length > 0) {
-      responseObj = result[0]
-    }
-    
-    console.log('Parsed response object:', { 
-      status: responseObj.status, 
-      message: responseObj.message,
-      dataLength: responseObj.data?.length 
-    })
-    
-    if (responseObj.status === 200 && responseObj.data && Array.isArray(responseObj.data)) {
-      data = responseObj.data
-    } else if (responseObj.success && responseObj.data) {
-      // Backward compatibility with old structure
-      data = responseObj.data
+    if (Array.isArray(result) && result.length > 0 && result[0].data) {
+      const responseObj = result[0]
+      console.log('📊 META ADS DEBUG: Response object:', {
+        status: responseObj.status,
+        message: responseObj.message,
+        dataLength: responseObj.data?.length
+      })
+      
+      if (responseObj.status === 200 && responseObj.data) {
+        data = responseObj.data
+      } else {
+        throw new Error(`API returned error: ${responseObj.message}`)
+      }
     } else if (Array.isArray(result)) {
-      // Direct array response fallback (for old API)
       data = result
+    } else if (result.data) {
+      data = result.data
     } else {
       console.warn('Unexpected API response structure:', result)
       data = []
     }
     
-    // Transform data to match expected field names if needed
+    // Transform data to match expected field structure
     data = transformApiData(data)
     
-    // Store in both caches
+    console.log('✅ META ADS DEBUG: Processed data:', {
+      recordCount: data.length,
+      dateRange: `${dateFrom} to ${dateTo}`,
+      uniqueDates: [...new Set(data.map(row => row.date_start?.split('T')[0]).filter(Boolean))].sort(),
+      firstRecord: data[0] ? {
+        campaign: data[0].campaign_name,
+        date: data[0].date_start,
+        spend: data[0].spend
+      } : 'no data'
+    })
+    
+    // Cache the successful response
     requestCache.set(cacheKey, { data, timestamp: Date.now() })
-    cacheUtils.setCache(urlCacheKey, data)
+    cacheUtils.setCache(cacheKey, data)
     
     return data
-
   } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout - please try again')
-    }
+    console.error('Error fetching meta ads data:', error)
     throw error
   }
 }
@@ -316,31 +370,35 @@ export const generateSampleData = () => {
   return sampleData
 }
 
-// Fetch dashboard data from API with enhanced caching
+// Fetch meta ads data (following salesOrders.js pattern)
 export const fetchDashboardData = async (options = {}) => {
+  const { startDate, endDate } = options
+  
+  // Use provided dates or fallback to current date  
+  const defaultStartDate = startDate || new Date().toISOString().split('T')[0]
+  const defaultEndDate = endDate || new Date().toISOString().split('T')[0]
+  
+  console.log('🔄 META ADS DEBUG: fetchDashboardData called with:', {
+    startDate: defaultStartDate,
+    endDate: defaultEndDate,
+    options
+  })
+  
   try {
-    // Build URL with date parameters if available
-    let url = API_BASE_URL
-    const { startDate, endDate } = options
+    const data = await fetchMetaAdsWithCache(defaultStartDate, defaultEndDate, options)
     
-    // Use provided dates or fallback to current date
-    const defaultStartDate = startDate || new Date().toISOString().split('T')[0]
-    const defaultEndDate = endDate || new Date().toISOString().split('T')[0]
+    console.log('✅ META ADS DEBUG: fetchDashboardData completed:', {
+      recordCount: data.length,
+      dateRange: `${defaultStartDate} to ${defaultEndDate}`
+    })
     
-    url += `?date-from=${defaultStartDate}&date-to=${defaultEndDate}`
-    
-    console.log('Fetching dashboard data from:', url)
-    
-    const data = await fetchWithCache(url, options)
-    
-    console.log('Data loaded successfully:', data.length, 'records')
     return data
     
   } catch (err) {
-    console.error('Error fetching data:', err)
+    console.error('❌ META ADS DEBUG: fetchDashboardData error:', err)
     
     // Enhanced error messages
-    let errorMessage = `Failed to load data: ${err.message}`
+    let errorMessage = `Failed to load meta ads data: ${err.message}`
     
     if (err.message.includes('CORS')) {
       errorMessage += ' (CORS policy error - check if the API allows cross-origin requests)'
