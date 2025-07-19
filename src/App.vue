@@ -248,6 +248,7 @@ onMounted(() => {
           :currentSort="currentSort"
           :selectedProducts="selectedProducts"
           :productOptions="productOptions"
+          :groupByMode="groupByMode"
           :handleSort="handleSort"
           :moveColumn="moveColumn"
           :formatValue="formatValue"

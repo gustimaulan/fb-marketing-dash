@@ -265,7 +265,18 @@ export const useDashboardStore = defineStore('dashboard', () => {
           key = row.adset_name || 'Unknown'
           break
         case 'date':
-          key = row.date_start || 'Unknown'
+          // Format date to yyyy-mm-dd if it's in ISO format
+          const dateValue = row.date_start || 'Unknown'
+          if (typeof dateValue === 'string' && dateValue.includes('T') && dateValue.includes('Z')) {
+            const date = new Date(dateValue)
+            if (!isNaN(date.getTime())) {
+              key = date.toISOString().split('T')[0] // Return yyyy-mm-dd
+            } else {
+              key = dateValue
+            }
+          } else {
+            key = dateValue
+          }
           break
         default:
           key = extractProductName(row.ad_name)

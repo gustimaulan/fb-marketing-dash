@@ -36,21 +36,21 @@
 
     <!-- Campaign Insights -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-      <!-- Top Performing Products -->
+      <!-- Top Performing Items -->
       <div class="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Top Performing Products</h3>
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Top Performing {{ getGroupByLabel() }}</h3>
         <div class="space-y-4">
-          <div v-if="topProducts.length === 0" class="text-sm text-gray-500 text-center py-8">
+          <div v-if="topItems.length === 0" class="text-sm text-gray-500 text-center py-8">
             No performance data available
           </div>
-          <div v-for="product in topProducts" :key="product?.label || 'unknown'" class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+          <div v-for="item in topItems" :key="item?.label || 'unknown'" class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
             <div>
-              <div class="font-medium text-gray-900">{{ product?.label || 'Unknown Product' }}</div>
-              <div class="text-sm text-gray-500 mt-1">ROAS: {{ formatNumber(product?.roas || 0, 2) }}x</div>
+              <div class="font-medium text-gray-900">{{ formatItemLabel(item?.label) || 'Unknown ' + getGroupByLabel() }}</div>
+              <div class="text-sm text-gray-500 mt-1">ROAS: {{ formatNumber(item?.roas || 0, 2) }}x</div>
             </div>
             <div class="text-right">
-              <div class="font-semibold text-green-600">{{ formatCurrency(product?.spend || 0) }}</div>
-              <div class="text-sm text-gray-500 mt-1">{{ formatNumber(product?.purchases || 0) }} purchases</div>
+              <div class="font-semibold text-green-600">{{ formatCurrency(item?.spend || 0) }}</div>
+              <div class="text-sm text-gray-500 mt-1">{{ formatNumber(item?.purchases || 0) }} purchases</div>
             </div>
           </div>
         </div>
@@ -185,6 +185,11 @@ const props = defineProps({
     required: true,
     default: () => []
   },
+  groupByMode: {
+    type: String,
+    required: true,
+    default: 'product'
+  },
   handleSort: {
     type: Function,
     required: true
@@ -221,8 +226,8 @@ onErrorCaptured((err, instance, info) => {
   return false // Let error propagate
 })
 
-// Top performing products based on ROAS
-const topProducts = computed(() => {
+// Top performing items based on ROAS
+const topItems = computed(() => {
   if (!props.sortedData || !Array.isArray(props.sortedData)) {
     console.warn('sortedData is not available or not an array:', props.sortedData)
     return []
@@ -233,6 +238,39 @@ const topProducts = computed(() => {
     .sort((a, b) => b.roas - a.roas)
     .slice(0, 5)
 })
+
+// Helper function to get the label for the current group by mode
+const getGroupByLabel = () => {
+  switch (props.groupByMode) {
+    case 'product':
+      return 'Products'
+    case 'ad_name':
+      return 'Ad Names'
+    case 'campaign':
+      return 'Campaigns'
+    case 'adset':
+      return 'Adsets'
+    case 'date':
+      return 'Dates'
+    default:
+      return 'Products'
+  }
+}
+
+// Helper function to format item labels (especially dates)
+const formatItemLabel = (label) => {
+  if (!label) return null
+  
+  // Handle ISO date format (2025-07-19T00:00:00.000Z)
+  if (typeof label === 'string' && label.includes('T') && label.includes('Z')) {
+    const date = new Date(label)
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0] // Return yyyy-mm-dd
+    }
+  }
+  
+  return label
+}
 
 // Optimization suggestions based on current metrics
 const optimizationSuggestions = computed(() => {

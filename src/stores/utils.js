@@ -55,6 +55,22 @@ export const useUtilsStore = defineStore('utils', () => {
       case 'purchases':
       case 'add_to_cart':
         return formatNumber(value)
+      case 'label':
+        // Check if the label is a date (when grouped by date)
+        if (typeof value === 'string') {
+          // Handle ISO date format (2025-07-19T00:00:00.000Z)
+          if (value.includes('T') && value.includes('Z')) {
+            const date = new Date(value)
+            if (!isNaN(date.getTime())) {
+              return date.toISOString().split('T')[0] // Return yyyy-mm-dd
+            }
+          }
+          // Handle simple yyyy-mm-dd format
+          if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return value
+          }
+        }
+        return value
       default:
         return value
     }

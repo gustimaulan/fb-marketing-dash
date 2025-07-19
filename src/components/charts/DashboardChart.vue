@@ -61,9 +61,17 @@ const renderChart = () => {
   
   const dates = Object.keys(props.chartData).sort()
   
-  // Format dates for Jakarta timezone display - safer approach
+  // Format dates in yyyy-mm-dd format
   const formattedDates = dates.map(dateStr => {
     try {
+      // Handle ISO date format (2025-07-19T00:00:00.000Z)
+      if (dateStr.includes('T') && dateStr.includes('Z')) {
+        const date = new Date(dateStr)
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0] // Return yyyy-mm-dd
+        }
+      }
+      
       // Handle YYYY-MM-DD format properly to avoid timezone issues
       const [year, month, day] = dateStr.split('-')
       
@@ -73,20 +81,8 @@ const renderChart = () => {
         return dateStr // Return original string if invalid
       }
       
-      // Create date using UTC to avoid timezone issues
-      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)))
-      
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        console.warn('Invalid date created:', dateStr)
-        return dateStr // Return original string if invalid
-      }
-      
-      return new Intl.DateTimeFormat('id-ID', {
-        timeZone: 'Asia/Jakarta',
-        month: 'short',
-        day: 'numeric'
-      }).format(date)
+      // Return in yyyy-mm-dd format
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
     } catch (error) {
       console.warn('Error formatting date:', dateStr, error)
       return dateStr // Return original string on error

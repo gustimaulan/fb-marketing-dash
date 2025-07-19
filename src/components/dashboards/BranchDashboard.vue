@@ -247,14 +247,14 @@
           </div>
 
           <!-- Budget Recommendations -->
-          <div class="p-4 rounded-lg" :class="getBudgetRecommendationClass(branchData)">
+          <!-- <div class="p-4 rounded-lg" :class="getBudgetRecommendationClass(branchData)">
             <h5 class="font-medium mb-2" :class="getBudgetRecommendationTextClass(branchData)">
               Budget Recommendation:
             </h5>
             <p class="text-sm" :class="getBudgetRecommendationTextClass(branchData)">
               {{ getBudgetRecommendation(branchData) }}
             </p>
-          </div>
+          </div> -->
         </div>
       </div>
 
@@ -436,12 +436,12 @@ const getAccuracyAnalysis = (fbValue, salesOrderValue) => {
   
   // Determine direction with more conservative thresholds
   let direction
-  if (ratio > 2.0) {
-    direction = 'fb-under-reporting'      // Actual is 2x+ higher than FB
-  } else if (ratio < 0.5) {
-    direction = 'fb-over-reporting'       // FB is 2x+ higher than actual
+  if (ratio === 1.0) {
+    direction = 'accurate'                // Exactly equal
+  } else if (ratio > 1.0) {
+    direction = 'fb-under-reporting'      // Actual is higher than FB
   } else {
-    direction = 'accurate'                // Within 2x range
+    direction = 'fb-over-reporting'       // FB is higher than actual
   }
   
   // Cap extreme ratios for display purposes
