@@ -322,9 +322,9 @@ export const fetchDashboardData = async (options = {}) => {
     let url = API_BASE_URL
     const { startDate, endDate } = options
     
-    // For now, use a default date range if none provided (for backward compatibility)
-    const defaultStartDate = startDate || '2025-07-18'
-    const defaultEndDate = endDate || '2025-07-18'
+    // Use provided dates or fallback to current date
+    const defaultStartDate = startDate || new Date().toISOString().split('T')[0]
+    const defaultEndDate = endDate || new Date().toISOString().split('T')[0]
     
     url += `?date-from=${defaultStartDate}&date-to=${defaultEndDate}`
     
