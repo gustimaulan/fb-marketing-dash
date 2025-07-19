@@ -348,23 +348,42 @@ const hasDataQualityIssues = computed(() => {
   })
 })
 
-// Tracking accuracy and gap analysis functions
+// Tracking accuracy and gap analysis functions - COMPLETELY REWRITTEN
 const getAccuracyPercentage = (fbValue, salesOrderValue) => {
-  if (!fbValue || !salesOrderValue) return 0
+  // Convert to numbers and handle all edge cases
+  const fbVal = parseFloat(fbValue) || 0
+  const salesVal = parseFloat(salesOrderValue) || 0
   
-  // Ensure both values are positive numbers
-  const fbVal = Math.abs(parseFloat(fbValue) || 0)
-  const salesVal = Math.abs(parseFloat(salesOrderValue) || 0)
+  console.log('🔍 Raw Input Values:', { fbValue, salesOrderValue, fbVal, salesVal })
   
-  if (fbVal === 0 || salesVal === 0) return 0
+  // Handle zero cases
+  if (fbVal <= 0 && salesVal <= 0) return 0
+  if (fbVal <= 0 && salesVal > 0) return 0  // FB missing data
+  if (salesVal <= 0 && fbVal > 0) return 0  // Sales missing data
   
-  // Calculate accuracy as: how close FB is to actual (capped at 100%)
-  // If FB reports higher than actual: salesVal/fbVal
-  // If actual is higher than FB: fbVal/salesVal
-  const accuracy = Math.min(fbVal, salesVal) / Math.max(fbVal, salesVal)
+  // Ensure positive values
+  const fbAbs = Math.abs(fbVal)
+  const salesAbs = Math.abs(salesVal)
   
-  // Cap at 100% and ensure reasonable bounds
-  return Math.min(accuracy * 100, 100)
+  // Calculate similarity percentage (0-100%)
+  const smaller = Math.min(fbAbs, salesAbs)
+  const larger = Math.max(fbAbs, salesAbs)
+  
+  // Prevent division by zero
+  if (larger === 0) return 0
+  
+  const similarity = (smaller / larger) * 100
+  
+  console.log('📊 Accuracy Calculation:', {
+    fbAbs, salesAbs, smaller, larger, similarity,
+    ratio: salesAbs / fbAbs
+  })
+  
+  // Always return a value between 0 and 100
+  const result = Math.max(0, Math.min(100, similarity))
+  console.log('✅ Final Accuracy:', result)
+  
+  return result
 }
 
 const getAccuracyColor = (fbValue, salesOrderValue) => {
@@ -374,53 +393,66 @@ const getAccuracyColor = (fbValue, salesOrderValue) => {
   return 'text-red-600'
 }
 
-// Enhanced accuracy analysis with direction indicator and debug logging
+// Enhanced accuracy analysis with direction indicator - COMPLETELY REWRITTEN
 const getAccuracyAnalysis = (fbValue, salesOrderValue) => {
-  // Debug logging to identify data issues
-  console.log('🔍 Accuracy Analysis Debug:', {
-    fbValue: { raw: fbValue, type: typeof fbValue },
-    salesOrderValue: { raw: salesOrderValue, type: typeof salesOrderValue }
+  // Convert to numbers safely
+  const fbVal = parseFloat(fbValue) || 0
+  const salesVal = parseFloat(salesOrderValue) || 0
+  
+  console.log('🔍 Enhanced Analysis Input:', {
+    fbValue: { raw: fbValue, parsed: fbVal, type: typeof fbValue },
+    salesOrderValue: { raw: salesOrderValue, parsed: salesVal, type: typeof salesOrderValue }
   })
   
-  const fbVal = Math.abs(parseFloat(fbValue) || 0)
-  const salesVal = Math.abs(parseFloat(salesOrderValue) || 0)
-  
-  // Additional validation
+  // Handle all zero/invalid cases
   if (isNaN(fbVal) || isNaN(salesVal)) {
-    console.warn('⚠️ Invalid numeric values detected:', { fbVal, salesVal })
-    return { accuracy: 0, direction: 'invalid-data', ratio: 0 }
+    return { accuracy: 0, direction: 'invalid-data', ratio: 0, fbValue: 0, salesValue: 0 }
   }
   
-  if (fbVal === 0 && salesVal === 0) return { accuracy: 0, direction: 'no-data', ratio: 0 }
-  if (fbVal === 0) return { accuracy: 0, direction: 'fb-missing', ratio: 0 }
-  if (salesVal === 0) return { accuracy: 0, direction: 'sales-missing', ratio: 0 }
-  
-  const accuracy = Math.min(fbVal, salesVal) / Math.max(fbVal, salesVal) * 100
-  const ratio = salesVal / fbVal
-  
-  // Debug extreme ratios
-  if (ratio > 10 || ratio < 0.1) {
-    console.warn('🚨 Extreme ratio detected:', {
-      fbVal, salesVal, ratio,
-      fbFormatted: formatCurrency(fbVal),
-      salesFormatted: formatCurrency(salesVal)
-    })
+  if (fbVal <= 0 && salesVal <= 0) {
+    return { accuracy: 0, direction: 'no-data', ratio: 0, fbValue: 0, salesValue: 0 }
   }
   
+  if (fbVal <= 0) {
+    return { accuracy: 0, direction: 'fb-missing', ratio: 0, fbValue: 0, salesValue: salesVal }
+  }
+  
+  if (salesVal <= 0) {
+    return { accuracy: 0, direction: 'sales-missing', ratio: 0, fbValue: fbVal, salesValue: 0 }
+  }
+  
+  // Use absolute values for calculation
+  const fbAbs = Math.abs(fbVal)
+  const salesAbs = Math.abs(salesVal)
+  
+  // Calculate accuracy using the same method as getAccuracyPercentage
+  const accuracy = getAccuracyPercentage(fbValue, salesOrderValue)
+  
+  // Calculate ratio safely
+  const ratio = fbAbs > 0 ? salesAbs / fbAbs : 0
+  
+  // Determine direction with more conservative thresholds
   let direction
-  if (ratio > 1.2) direction = 'fb-under-reporting'      // FB reports less than actual
-  else if (ratio < 0.8) direction = 'fb-over-reporting'  // FB reports more than actual  
-  else direction = 'accurate'                            // Close match
+  if (ratio > 2.0) {
+    direction = 'fb-under-reporting'      // Actual is 2x+ higher than FB
+  } else if (ratio < 0.5) {
+    direction = 'fb-over-reporting'       // FB is 2x+ higher than actual
+  } else {
+    direction = 'accurate'                // Within 2x range
+  }
+  
+  // Cap extreme ratios for display purposes
+  const displayRatio = Math.min(Math.max(ratio, 0.01), 100)
   
   const result = { 
-    accuracy: Math.min(accuracy, 100), 
+    accuracy, 
     direction, 
-    ratio,
-    fbValue: fbVal,
-    salesValue: salesVal
+    ratio: displayRatio,
+    fbValue: fbAbs,
+    salesValue: salesAbs
   }
   
-  console.log('📊 Accuracy Result:', result)
+  console.log('📊 Enhanced Analysis Result:', result)
   return result
 }
 
