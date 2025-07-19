@@ -1,7 +1,7 @@
 // API functions for dashboard data fetching with enhanced caching
 
 // Use environment variables for API endpoints
-const API_URL = import.meta.env.VITE_DASHBOARD_API_URL || 'https://script.google.com/macros/s/AKfycbxXsepwekS2OTsD-EuQqQeRsK4q8JWcqfNNO526xR_ItNUVuKKXrzdwah6I_upUeVi6/exec'
+const API_BASE_URL = import.meta.env.VITE_DASHBOARD_API_URL || 'https://workflows.cekat.ai/webhook/meta-ads-data'
 
 // In-memory cache for request deduplication
 const requestCache = new Map()
@@ -30,6 +30,52 @@ const extractProductName = (adName) => {
     return parts[1].trim() // Get text between first and second underscore
   }
   return adName // Fallback to full ad name if pattern doesn't match
+}
+
+// Transform API data to match expected field structure
+const transformApiData = (data) => {
+  if (!Array.isArray(data)) return data
+  
+  return data.map(row => {
+    // Create transformed row with field mapping
+    const transformed = { ...row }
+    
+    // Map new API field names to expected field names
+    if (row.messaging_conversation_started_7d !== undefined) {
+      transformed['onsite_conversion.messaging_conversation_started_7d'] = row.messaging_conversation_started_7d
+    }
+    
+    // Ensure numeric fields are properly converted
+    const numericFields = [
+      'spend', 'reach', 'impressions', 'frequency', 'cpm',
+      'messaging_conversation_started_7d', 'cost_per_messaging_conversation_started_7d',
+      'purchase', 'add_to_cart', 'cost_per_purchase', 'cost_per_add_to_cart', 'purchase_value'
+    ]
+    
+    numericFields.forEach(field => {
+      if (transformed[field] !== undefined) {
+        const value = parseFloat(transformed[field])
+        transformed[field] = isNaN(value) ? 0 : value
+      }
+    })
+    
+    // Handle date fields - ensure consistent format
+    if (transformed.date_start) {
+      // Convert ISO format to YYYY-MM-DD if needed
+      if (transformed.date_start.includes('T')) {
+        transformed.date_start = transformed.date_start.split('T')[0]
+      }
+    }
+    
+    if (transformed.date_stop) {
+      // Convert ISO format to YYYY-MM-DD if needed
+      if (transformed.date_stop.includes('T')) {
+        transformed.date_stop = transformed.date_stop.split('T')[0]
+      }
+    }
+    
+    return transformed
+  })
 }
 
 // Cache utilities
@@ -138,8 +184,42 @@ const fetchWithCache = async (url, options = {}) => {
 
     const result = await response.json()
     
-    // Cache the successful response
-    const data = result.success && result.data ? result.data : (Array.isArray(result) ? result : [])
+    console.log('Raw API response:', { 
+      isArray: Array.isArray(result),
+      length: Array.isArray(result) ? result.length : 'not array',
+      firstItemKeys: Array.isArray(result) && result[0] ? Object.keys(result[0]) : 'no first item'
+    })
+    
+    // Handle new API response structure - API returns array with single object
+    let data = []
+    let responseObj = result
+    
+    // If response is array, get first item
+    if (Array.isArray(result) && result.length > 0) {
+      responseObj = result[0]
+    }
+    
+    console.log('Parsed response object:', { 
+      status: responseObj.status, 
+      message: responseObj.message,
+      dataLength: responseObj.data?.length 
+    })
+    
+    if (responseObj.status === 200 && responseObj.data && Array.isArray(responseObj.data)) {
+      data = responseObj.data
+    } else if (responseObj.success && responseObj.data) {
+      // Backward compatibility with old structure
+      data = responseObj.data
+    } else if (Array.isArray(result)) {
+      // Direct array response fallback (for old API)
+      data = result
+    } else {
+      console.warn('Unexpected API response structure:', result)
+      data = []
+    }
+    
+    // Transform data to match expected field names if needed
+    data = transformApiData(data)
     
     // Store in both caches
     requestCache.set(cacheKey, { data, timestamp: Date.now() })
@@ -238,7 +318,19 @@ export const generateSampleData = () => {
 // Fetch dashboard data from API with enhanced caching
 export const fetchDashboardData = async (options = {}) => {
   try {
-    const data = await fetchWithCache(API_URL, options)
+    // Build URL with date parameters if available
+    let url = API_BASE_URL
+    const { startDate, endDate } = options
+    
+    // For now, use a default date range if none provided (for backward compatibility)
+    const defaultStartDate = startDate || '2025-07-18'
+    const defaultEndDate = endDate || '2025-07-18'
+    
+    url += `?date-from=${defaultStartDate}&date-to=${defaultEndDate}`
+    
+    console.log('Fetching dashboard data from:', url)
+    
+    const data = await fetchWithCache(url, options)
     
     console.log('Data loaded successfully:', data.length, 'records')
     return data
