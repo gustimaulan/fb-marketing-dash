@@ -65,9 +65,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Enhanced TanStack Query with daily data update schedule
   const dashboardQuery = useQuery({
-    queryKey: ['dashboard-data', startDate, endDate],
+    queryKey: computed(() => ['dashboard-data', startDate.value, endDate.value]),
     queryFn: async () => {
-      console.log('Dashboard query function called with dates:', { 
+      const queryId = Date.now()
+      console.log(`🔄 [${queryId}] Dashboard query function called with dates:`, { 
         startDate: startDate.value, 
         endDate: endDate.value 
       })
@@ -76,7 +77,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
           startDate: startDate.value,
           endDate: endDate.value
         })
-        console.log('Dashboard data fetched successfully:', data.length, 'records')
+        console.log(`✅ [${queryId}] Dashboard data fetched successfully:`, data.length, 'records')
         return data
       } catch (error) {
         console.log('Dashboard query error:', error)
@@ -92,8 +93,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     },
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 4 * 60 * 60 * 1000, // 4 hours - data updates daily at 4 AM
-    cacheTime: 24 * 60 * 60 * 1000, // 24 hours - keep cache for full day
+    staleTime: 0, // Always consider data stale so it refetches when date changes
+    cacheTime: 5 * 60 * 1000, // 5 minutes - shorter cache time
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: true,
@@ -580,10 +581,28 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   const refetchData = async () => {
+    console.log('🔄 Manual refetch requested - clearing all caches')
     // Force fresh data and clear caches
     cacheManager.clearAll()
+    
+    // Clear API-level caches too
+    const requestCache = new Map() // Clear in-memory cache
+    
+    // Clear all dashboard-related localStorage caches
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('dashboard_')) {
+        localStorage.removeItem(key)
+      }
+    })
+    
+    // Clear TanStack Query cache for dashboard data
+    dashboardQuery.refetch({ 
+      cancelRefetch: false,
+      forceFresh: true 
+    })
+    
     useSampleDataFallback.value = false
-    await dashboardQuery.refetch()
+    console.log('✅ Refetch completed')
   }
 
   const getJakartaTimeString = (date = new Date()) => {

@@ -164,10 +164,11 @@ const fetchWithCache = async (url, options = {}) => {
     requestCache.delete(cacheKey)
   }
 
-  // Check localStorage cache
-  const cachedData = cacheUtils.getCache(STORAGE_KEYS.DASHBOARD_DATA)
+  // Check localStorage cache with URL-specific key
+  const urlCacheKey = `dashboard_${btoa(url).slice(0, 20)}` // Use URL hash as cache key
+  const cachedData = cacheUtils.getCache(urlCacheKey)
   if (cachedData && !options.forceFresh) {
-    console.log('Using localStorage cache for dashboard data')
+    console.log('Using localStorage cache for', url)
     return cachedData
   }
 
@@ -223,7 +224,7 @@ const fetchWithCache = async (url, options = {}) => {
     
     // Store in both caches
     requestCache.set(cacheKey, { data, timestamp: Date.now() })
-    cacheUtils.setCache(STORAGE_KEYS.DASHBOARD_DATA, data)
+    cacheUtils.setCache(urlCacheKey, data)
     
     return data
 
