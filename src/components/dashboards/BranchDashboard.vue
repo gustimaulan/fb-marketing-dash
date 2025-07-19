@@ -151,21 +151,47 @@
           <div class="mb-6">
             <!-- Tracking Accuracy -->
             <div class="bg-gray-50 p-4 rounded-lg border mb-4">
-              <h5 class="font-semibold text-gray-800 mb-3">📊 Tracking Accuracy</h5>
-              <div class="grid grid-cols-2 gap-4">
-                <div class="text-center">
-                  <div class="text-lg font-bold" :class="getAccuracyColor(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue)">
+              <h5 class="font-semibold text-gray-800 mb-3">📊 Tracking Accuracy Analysis</h5>
+              
+              <!-- Revenue Accuracy -->
+              <div class="mb-3 p-3 bg-white rounded border">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-sm font-medium text-gray-700">Revenue Accuracy</span>
+                  <span class="text-lg font-bold" :class="getAccuracyColor(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue)">
                     {{ formatPercentage(getAccuracyPercentage(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue)) }}
-                  </div>
-                  <div class="text-xs text-gray-600">Revenue Accuracy</div>
+                  </span>
                 </div>
-                <div class="text-center">
-                  <div class="text-lg font-bold" :class="getAccuracyColor(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders)">
+                <div class="text-xs text-gray-500">
+                  FB: {{ formatCurrency(branchData.metrics.fb_reported.revenue) }} vs 
+                  Actual: {{ formatCurrency(branchData.metrics.sales_order.revenue) }}
+                  <span v-if="getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction === 'fb-under-reporting'" 
+                        class="text-orange-600 font-medium ml-2">📉 FB Under-reporting</span>
+                  <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction === 'fb-over-reporting'" 
+                        class="text-red-600 font-medium ml-2">📈 FB Over-reporting</span>
+                  <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction === 'accurate'" 
+                        class="text-green-600 font-medium ml-2">✅ Accurate</span>
+                </div>
+              </div>
+
+              <!-- Order Accuracy -->
+              <div class="p-3 bg-white rounded border">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-sm font-medium text-gray-700">Order Count Accuracy</span>
+                  <span class="text-lg font-bold" :class="getAccuracyColor(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders)">
                     {{ formatPercentage(getAccuracyPercentage(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders)) }}
-                  </div>
-                  <div class="text-xs text-gray-600">Order Accuracy</div>
-            </div>
-            </div>
+                  </span>
+                </div>
+                <div class="text-xs text-gray-500">
+                  FB: {{ formatNumber(branchData.metrics.fb_reported.orders) }} vs 
+                  Actual: {{ formatNumber(branchData.metrics.sales_order.orders) }}
+                  <span v-if="getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction === 'fb-under-reporting'" 
+                        class="text-orange-600 font-medium ml-2">📉 FB Under-reporting</span>
+                  <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction === 'fb-over-reporting'" 
+                        class="text-red-600 font-medium ml-2">📈 FB Over-reporting</span>
+                  <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction === 'accurate'" 
+                        class="text-green-600 font-medium ml-2">✅ Accurate</span>
+                </div>
+              </div>
             </div>
 
             <!-- Primary Performance (Based on Sales Order) -->
@@ -275,8 +301,20 @@ const averageCostPerOrder = computed(() => {
 // Tracking accuracy and gap analysis functions
 const getAccuracyPercentage = (fbValue, salesOrderValue) => {
   if (!fbValue || !salesOrderValue) return 0
-  const accuracy = Math.min(fbValue, salesOrderValue) / Math.max(fbValue, salesOrderValue)
-  return accuracy * 100
+  
+  // Ensure both values are positive numbers
+  const fbVal = Math.abs(parseFloat(fbValue) || 0)
+  const salesVal = Math.abs(parseFloat(salesOrderValue) || 0)
+  
+  if (fbVal === 0 || salesVal === 0) return 0
+  
+  // Calculate accuracy as: how close FB is to actual (capped at 100%)
+  // If FB reports higher than actual: salesVal/fbVal
+  // If actual is higher than FB: fbVal/salesVal
+  const accuracy = Math.min(fbVal, salesVal) / Math.max(fbVal, salesVal)
+  
+  // Cap at 100% and ensure reasonable bounds
+  return Math.min(accuracy * 100, 100)
 }
 
 const getAccuracyColor = (fbValue, salesOrderValue) => {
@@ -284,6 +322,32 @@ const getAccuracyColor = (fbValue, salesOrderValue) => {
   if (accuracy >= 80) return 'text-green-600'
   if (accuracy >= 60) return 'text-yellow-600'
   return 'text-red-600'
+}
+
+// Enhanced accuracy analysis with direction indicator
+const getAccuracyAnalysis = (fbValue, salesOrderValue) => {
+  const fbVal = Math.abs(parseFloat(fbValue) || 0)
+  const salesVal = Math.abs(parseFloat(salesOrderValue) || 0)
+  
+  if (fbVal === 0 && salesVal === 0) return { accuracy: 0, direction: 'no-data', ratio: 0 }
+  if (fbVal === 0) return { accuracy: 0, direction: 'fb-missing', ratio: 0 }
+  if (salesVal === 0) return { accuracy: 0, direction: 'sales-missing', ratio: 0 }
+  
+  const accuracy = Math.min(fbVal, salesVal) / Math.max(fbVal, salesVal) * 100
+  const ratio = salesVal / fbVal
+  
+  let direction
+  if (ratio > 1.2) direction = 'fb-under-reporting'      // FB reports less than actual
+  else if (ratio < 0.8) direction = 'fb-over-reporting'  // FB reports more than actual  
+  else direction = 'accurate'                            // Close match
+  
+  return { 
+    accuracy: Math.min(accuracy, 100), 
+    direction, 
+    ratio,
+    fbValue: fbVal,
+    salesValue: salesVal
+  }
 }
 
 const getRevenueGap = (fbRevenue, salesOrderRevenue) => {
