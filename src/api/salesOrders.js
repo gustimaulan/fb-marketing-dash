@@ -239,8 +239,6 @@ export const salesOrderCacheManager = {
 
   // Clear all sales order caches
   clearAll: () => {
-    console.log('Clearing all sales order caches...')
-    
     // Clear localStorage caches
     const keysToRemove = []
     for (let i = 0; i < localStorage.length; i++) {
@@ -256,8 +254,6 @@ export const salesOrderCacheManager = {
     
     // Clear in-memory cache
     requestCache.clear()
-    
-    console.log(`Cleared ${keysToRemove.length} sales order caches`)
   },
 
   // Force refresh data for specific date range

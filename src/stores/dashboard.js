@@ -66,29 +66,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
   // Enhanced TanStack Query with daily data update schedule
   const dashboardQuery = useQuery({
     queryKey: computed(() => {
-      const key = ['dashboard-data', startDate.value, endDate.value]
-      console.log('🔑 Query Key Generated:', key)
-      return key
+      return ['dashboard-data', startDate.value, endDate.value]
     }),
     queryFn: async () => {
-      const queryId = Date.now()
-      console.log(`🔄 [${queryId}] NEW API CALL - Dashboard query function called with dates:`, { 
-        startDate: startDate.value, 
-        endDate: endDate.value,
-        expectedURL: `https://workflows.cekat.ai/webhook/meta-ads-data?date-from=${startDate.value}&date-to=${endDate.value}`
-      })
       try {
         const data = await fetchDashboardData({
           startDate: startDate.value,
           endDate: endDate.value
-        })
-        console.log(`✅ [${queryId}] Dashboard data fetched successfully:`, {
-          recordCount: data.length,
-          dateRange: `${startDate.value} to ${endDate.value}`,
-          firstRecord: data[0] ? { 
-            campaign: data[0].campaign_name, 
-            date: data[0].date_start 
-          } : 'no data'
         })
         return data
       } catch (error) {
@@ -139,16 +123,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const leadsRatioQuery = useQuery({
     queryKey: ['leads-ratio', startDate, endDate],
     queryFn: async () => {
-      console.log(`📅 LEADS DEBUG: Fetching REAL leads data for ${startDate.value} to ${endDate.value}`)
-      console.log(`📅 LEADS DEBUG: Date range details:`, {
-        startDate: startDate.value,
-        endDate: endDate.value,
-        dateRange: dateRange.value,
-        expectedDate: '2025-07-18',
-        isExpectedDate: startDate.value === '2025-07-18' && endDate.value === '2025-07-18'
-      })
       const data = await fetchLeadsRatio(startDate.value, endDate.value)
-      console.log('✅ LEADS DEBUG: Real leads data received:', data)
       return data
     },
     retry: 3, // Increased retries for better reliability
@@ -174,25 +149,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Raw data from query
   const allData = computed(() => {
-    const data = dashboardQuery.data.value || []
-    
-    // Get unique dates in the data for debugging
-    const uniqueDates = [...new Set(data.map(row => row.date_start?.split('T')[0]).filter(Boolean))].sort()
-    
-    console.log('allData computed (direct from API):', { 
-      totalRecords: data.length, 
-      loading: dashboardQuery.isLoading.value,
-      error: dashboardQuery.error.value,
-      usingSampleData: useSampleDataFallback.value,
-      dateRange: `${startDate.value} to ${endDate.value}`,
-      uniqueDatesInData: uniqueDates,
-      dateCount: uniqueDates.length,
-      firstRecord: data[0] ? {
-        campaign: data[0].campaign_name,
-        date: data[0].date_start
-      } : 'no records'
-    })
-    return data
+    return dashboardQuery.data.value || []
   })
   
   // Sales order data
@@ -599,9 +556,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   const refetchData = async () => {
-    console.log('🔄 Manual refetch requested - clearing all caches')
     // Force fresh data and clear caches
-    cacheManager.clearAll()
+    metaAdsCacheManager.clearAll()
     
     // Clear API-level caches too
     const requestCache = new Map() // Clear in-memory cache
@@ -620,7 +576,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     })
     
     useSampleDataFallback.value = false
-    console.log('✅ Refetch completed')
   }
 
   const getJakartaTimeString = (date = new Date()) => {
@@ -639,22 +594,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
     const today = new Date()
     const jakartaToday = new Date(getJakartaTimeString(today))
     
-    console.log('setDateRange called with:', range)
-    console.log('Today:', today)
-    console.log('Jakarta today:', jakartaToday)
-    
     switch (range) {
       case 'today':
         startDate.value = formatDateString(jakartaToday)
         endDate.value = formatDateString(jakartaToday)
-        console.log('Today range set:', startDate.value, 'to', endDate.value)
         break
       case 'yesterday':
         const yesterday = new Date(jakartaToday)
         yesterday.setDate(yesterday.getDate() - 1)
         startDate.value = formatDateString(yesterday)
         endDate.value = formatDateString(yesterday)
-        console.log('Yesterday range set:', startDate.value, 'to', endDate.value)
         break
       case 'last7days':
         const sevenDaysAgo = new Date(jakartaToday)
@@ -663,27 +612,18 @@ export const useDashboardStore = defineStore('dashboard', () => {
         last7EndDate.setDate(last7EndDate.getDate() - 1)
         startDate.value = formatDateString(sevenDaysAgo)
         endDate.value = formatDateString(last7EndDate)
-        console.log('Last 7 days range set:', startDate.value, 'to', endDate.value)
         break
       case 'last30days':
         const thirtyDaysAgo = new Date(jakartaToday)
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29)
         startDate.value = formatDateString(thirtyDaysAgo)
         endDate.value = formatDateString(jakartaToday)
-        console.log('Last 30 days range set:', startDate.value, 'to', endDate.value)
         break
       case 'thisMonth':
       case 'thismonth':
         const firstDayOfMonth = new Date(jakartaToday.getFullYear(), jakartaToday.getMonth(), 1)
         startDate.value = formatDateString(firstDayOfMonth)
         endDate.value = formatDateString(jakartaToday)
-        console.log('📅 THIS MONTH calculation:', {
-          jakartaToday: jakartaToday.toISOString(),
-          firstDayCalculated: firstDayOfMonth.toISOString(),
-          startDateSet: startDate.value,
-          endDateSet: endDate.value,
-          expectedRecords: 'Should be 513 records for July 2025'
-        })
         break
       case 'lastMonth':
       case 'lastmonth':
@@ -691,14 +631,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
         const lastDayOfLastMonth = new Date(jakartaToday.getFullYear(), jakartaToday.getMonth(), 0)
         startDate.value = formatDateString(firstDayOfLastMonth)
         endDate.value = formatDateString(lastDayOfLastMonth)
-        console.log('Last month range set:', startDate.value, 'to', endDate.value)
         break
       case 'thisweek':
         const startOfWeek = new Date(jakartaToday)
         startOfWeek.setDate(jakartaToday.getDate() - jakartaToday.getDay())
         startDate.value = formatDateString(startOfWeek)
         endDate.value = formatDateString(jakartaToday)
-        console.log('This week range set:', startDate.value, 'to', endDate.value)
         break
       case 'lastweek':
         const startOfLastWeek = new Date(jakartaToday)
@@ -707,7 +645,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
         endOfLastWeek.setDate(startOfLastWeek.getDate() + 6)
         startDate.value = formatDateString(startOfLastWeek)
         endDate.value = formatDateString(endOfLastWeek)
-        console.log('Last week range set:', startDate.value, 'to', endDate.value)
         break
     }
   }
@@ -721,20 +658,14 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   const moveColumn = (columnKey, direction) => {
-    console.log('moveColumn called:', { columnKey, direction })
-    
     // Get all non-fixed columns sorted by order
     const moveableColumns = Object.entries(columnConfig.value)
       .filter(([, config]) => !config.fixed)
       .sort(([, a], [, b]) => a.order - b.order)
     
-    console.log('Moveable columns:', moveableColumns.map(([key, config]) => ({ key, order: config.order })))
-    
     const currentIndex = moveableColumns.findIndex(([key]) => key === columnKey)
-    console.log('Current index in moveable columns:', currentIndex)
     
     if (currentIndex === -1) {
-      console.log('Column not found or is fixed')
       return
     }
     
@@ -745,26 +676,17 @@ export const useDashboardStore = defineStore('dashboard', () => {
     } else if (direction === 'down') {
       targetIndex = currentIndex + 1
     } else {
-      console.log('Invalid direction:', direction)
       return
     }
     
-    console.log('Target index:', targetIndex)
-    
     // Check bounds
     if (targetIndex < 0 || targetIndex >= moveableColumns.length) {
-      console.log('Cannot move column - target index out of bounds')
       return
     }
     
     // Get the columns to swap
     const [currentKey, currentConfig] = moveableColumns[currentIndex]
     const [targetKey, targetConfig] = moveableColumns[targetIndex]
-    
-    console.log('Swapping orders:', { 
-      [currentKey]: `${currentConfig.order} -> ${targetConfig.order}`,
-      [targetKey]: `${targetConfig.order} -> ${currentConfig.order}`
-    })
     
     // Swap the orders
     const tempOrder = currentConfig.order
@@ -773,8 +695,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     
     // Save preferences after column reordering
     savePreferences()
-    
-    console.log('Column move completed successfully')
   }
 
   const toggleColumnMenu = () => {
@@ -786,21 +706,17 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   const applyProductFilter = (products) => {
-    console.log('Applying product filter:', products)
     selectedProducts.value = [...products]
     // Save preferences after applying filter
     savePreferences()
   }
 
   const initializeDashboard = () => {
-    console.log('🚀 Initializing Dashboard...')
-    
     // Load user preferences first
     loadPreferences()
     
     // Always sync dates with the current dateRange (whether from preferences or default)
     const currentRange = dateRange.value || 'last7days'
-    console.log('📅 Setting initial date range:', currentRange)
     setDateRange(currentRange)
     
     // Update selected products when data changes
@@ -853,8 +769,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
   
   const clearAllCaches = () => {
-    console.log('🧹 Clearing ALL caches completely...')
-    
     // Clear Pinia cache managers
     metaAdsCacheManager.clearAll()
     salesOrderCacheManager.clearAll()
@@ -874,7 +788,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
   
   const refreshData = () => {
-    console.log('Refreshing all data...')
     if (startDate.value && endDate.value) {
       metaAdsCacheManager.refresh(startDate.value, endDate.value)
       salesOrderCacheManager.refresh(startDate.value, endDate.value)

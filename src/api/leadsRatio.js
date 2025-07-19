@@ -86,22 +86,15 @@ export const leadsRatioCacheManager = {
   },
 
   clearAll: () => {
-    console.log('🧹 LEADS DEBUG: Clearing all leads ratio cache')
     Object.values(STORAGE_KEYS).forEach(key => {
       cacheUtils.clearCache(key)
-      console.log(`🧹 LEADS DEBUG: Cleared cache key: ${key}`)
     })
     requestCache.clear()
-    console.log('🧹 LEADS DEBUG: Cleared in-memory request cache')
   },
 
   // Add debug helper function
   debugLeadsData: () => {
-    console.log('🔍 LEADS DEBUG: Current cache status:')
     const info = leadsRatioCacheManager.getCacheInfo()
-    console.log('Cache info:', info)
-    console.log('In-memory cache size:', requestCache.size)
-    console.log('Storage keys:', STORAGE_KEYS)
     return info
   }
 }
@@ -123,11 +116,8 @@ export const fetchLeadsRatio = async (startDate, endDate) => {
     return requestCache.get(requestKey)
   }
 
-  console.log('🔍 LEADS DEBUG: Fetching leads ratio data from API:', startDate, 'to', endDate)
-  
   try {
     const url = `${LEADS_RATIO_API}?date-from=${startDate}&date-to=${endDate}`
-    console.log('🌐 LEADS DEBUG: API URL:', url)
     const response = await fetch(url)
     
     if (!response.ok) {
@@ -135,12 +125,6 @@ export const fetchLeadsRatio = async (startDate, endDate) => {
     }
     
     const rawData = await response.json()
-    console.log('📥 LEADS DEBUG: Raw API response:', rawData)
-    console.log('📊 LEADS DEBUG: Response structure:', {
-      isArray: Array.isArray(rawData),
-      length: rawData?.length,
-      firstItem: rawData?.[0]
-    })
     
     // Extract data from the response array
     const responseData = rawData[0] // API returns array with single object
@@ -174,8 +158,6 @@ export const fetchLeadsRatio = async (startDate, endDate) => {
 
 // Process raw leads ratio data into structured format
 const processLeadsRatioData = (rawData) => {
-  console.log('🔧 LEADS DEBUG: Processing raw data:', rawData)
-  
   const branches = rawData.map(branch => {
     const processed = {
       name: branch.label_group,
@@ -184,17 +166,11 @@ const processLeadsRatioData = (rawData) => {
       ratio: parseFloat(branch.percentage) / 100,
       purchases: parseInt(branch.purchase) || 0
     }
-    console.log(`🏢 LEADS DEBUG: Branch processed - ${processed.name}: ${processed.total} leads`)
     return processed
   })
   
   const totalLeads = branches.reduce((sum, branch) => sum + branch.total, 0)
   const totalPurchases = branches.reduce((sum, branch) => sum + branch.purchases, 0)
-  
-  console.log('🔢 LEADS DEBUG: Calculation breakdown:')
-  console.log('  - Individual branches:', branches.map(b => `${b.name}: ${b.total}`).join(', '))
-  console.log(`  - Total calculated: ${totalLeads} (expected: 19, actual: ${totalLeads})`)
-  console.log(`  - Difference: ${totalLeads - 19}`)
   
   const result = {
     branches,
@@ -203,7 +179,6 @@ const processLeadsRatioData = (rawData) => {
     lastUpdated: new Date().toISOString()
   }
   
-  console.log('✅ LEADS DEBUG: Final processed data:', result)
   return result
 }
 
@@ -264,33 +239,14 @@ export const generateSampleLeadsRatio = () => {
 
 // Global debug function - call from browser console
 window.debugLeads = async (startDate = '2025-07-18', endDate = '2025-07-18') => {
-  console.log('🚀 LEADS DEBUGGER: Starting debug session...')
-  console.log(`📅 Target date range: ${startDate} to ${endDate}`)
-  
   // Clear cache first
   leadsRatioCacheManager.clearAll()
   
   try {
     // Make fresh API call
-    console.log('🔄 Making fresh API call...')
     const data = await fetchLeadsRatio(startDate, endDate)
-    
-    console.log('📋 SUMMARY:')
-    console.log(`  Expected: 19 leads`)
-    console.log(`  Actual: ${data.totalLeads} leads`)
-    console.log(`  Difference: ${data.totalLeads - 19}`)
-    console.log(`  Branches: ${data.branches?.length || 0}`)
-    
-    if (data.branches) {
-      console.log('🏢 Branch breakdown:')
-      data.branches.forEach(branch => {
-        console.log(`  - ${branch.name}: ${branch.total} leads (${branch.percentage}%)`)
-      })
-    }
-    
     return data
   } catch (error) {
-    console.error('❌ Debug failed:', error)
     return { error: error.message }
   }
 } 

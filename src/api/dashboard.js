@@ -79,27 +79,20 @@ export const metaAdsCacheManager = {
     const cacheInfo = {}
     
     // Get all localStorage keys that start with 'meta_ads_'
-    console.log('🔍 META ADS DEBUG: Checking localStorage for meta_ads_ keys...')
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
       if (key && key.startsWith('meta_ads_')) {
-        console.log(`📦 META ADS DEBUG: Found cache key: ${key}`)
         const info = cacheUtils.getCacheInfo(key)
-        console.log(`📊 META ADS DEBUG: Cache info for ${key}:`, info)
         if (info) {
           cacheInfo[key] = info
         }
       }
     }
-    
-    console.log('✅ META ADS DEBUG: Final cache info:', cacheInfo)
     return cacheInfo
   },
 
   // Clear all meta ads caches
   clearAll: () => {
-    console.log('🧹 META ADS DEBUG: Clearing all meta ads caches...')
-    
     // Clear localStorage caches
     const keysToRemove = []
     for (let i = 0; i < localStorage.length; i++) {
@@ -115,14 +108,10 @@ export const metaAdsCacheManager = {
     
     // Clear in-memory cache
     requestCache.clear()
-    
-    console.log(`✅ META ADS DEBUG: Cleared ${keysToRemove.length} meta ads caches`)
   },
 
   // Force refresh data for specific date range
   refresh: async (dateFrom, dateTo) => {
-    console.log(`🔄 META ADS DEBUG: Refreshing meta ads data for ${dateFrom} to ${dateTo}...`)
-    
     // Clear specific cache
     const cacheKey = `meta_ads_${dateFrom}_${dateTo}`
     cacheUtils.clearCache(cacheKey)
@@ -230,8 +219,6 @@ const fetchMetaAdsWithCache = async (dateFrom, dateTo, options = {}) => {
   }
 
   // Make fresh request
-  console.log('📡 META ADS DEBUG: Making fresh API request:', url)
-  
   try {
     const response = await fetch(url)
     
@@ -241,21 +228,10 @@ const fetchMetaAdsWithCache = async (dateFrom, dateTo, options = {}) => {
     
     const result = await response.json()
     
-    console.log('📥 META ADS DEBUG: Raw API response structure:', {
-      isArray: Array.isArray(result),
-      length: Array.isArray(result) ? result.length : 'not array',
-      firstItemKeys: Array.isArray(result) && result[0] ? Object.keys(result[0]) : 'no first item'
-    })
-    
     // Handle the API response format which returns an array with a data property (same as salesOrders.js)
     let data = []
     if (Array.isArray(result) && result.length > 0 && result[0].data) {
       const responseObj = result[0]
-      console.log('📊 META ADS DEBUG: Response object:', {
-        status: responseObj.status,
-        message: responseObj.message,
-        dataLength: responseObj.data?.length
-      })
       
       if (responseObj.status === 200 && responseObj.data) {
         data = responseObj.data
@@ -274,26 +250,9 @@ const fetchMetaAdsWithCache = async (dateFrom, dateTo, options = {}) => {
     // Transform data to match expected field structure
     data = transformApiData(data)
     
-    console.log('✅ META ADS DEBUG: Processed data:', {
-      recordCount: data.length,
-      dateRange: `${dateFrom} to ${dateTo}`,
-      uniqueDates: [...new Set(data.map(row => row.date_start?.split('T')[0]).filter(Boolean))].sort(),
-      firstRecord: data[0] ? {
-        campaign: data[0].campaign_name,
-        date: data[0].date_start,
-        spend: data[0].spend
-      } : 'no data'
-    })
-    
     // Cache the successful response
     requestCache.set(cacheKey, { data, timestamp: Date.now() })
     cacheUtils.setCache(cacheKey, data)
-    
-    console.log('💾 META ADS DEBUG: Data cached successfully:', {
-      cacheKey,
-      recordCount: data.length,
-      cacheEntryExists: localStorage.getItem(cacheKey) ? 'YES' : 'NO'
-    })
     
     return data
   } catch (error) {
@@ -390,19 +349,8 @@ export const fetchDashboardData = async (options = {}) => {
   const defaultStartDate = startDate || new Date().toISOString().split('T')[0]
   const defaultEndDate = endDate || new Date().toISOString().split('T')[0]
   
-  console.log('🔄 META ADS DEBUG: fetchDashboardData called with:', {
-    startDate: defaultStartDate,
-    endDate: defaultEndDate,
-    options
-  })
-  
   try {
     const data = await fetchMetaAdsWithCache(defaultStartDate, defaultEndDate, options)
-    
-    console.log('✅ META ADS DEBUG: fetchDashboardData completed:', {
-      recordCount: data.length,
-      dateRange: `${defaultStartDate} to ${defaultEndDate}`
-    })
     
     return data
     
