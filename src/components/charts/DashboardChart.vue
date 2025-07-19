@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, defineProps } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { Chart, registerables } from 'chart.js'
 
 Chart.register(...registerables)
@@ -38,6 +38,12 @@ const statusText = ref('')
 
 const renderChart = () => {
   if (!chartRef.value || !Object.keys(props.chartData).length) {
+    return
+  }
+  
+  // Additional safety check for canvas element
+  if (!chartRef.value.getContext) {
+    console.warn('Canvas ref not ready yet')
     return
   }
   
@@ -150,11 +156,13 @@ const renderChart = () => {
   })
 }
 
-watch([() => props.chartData, () => props.selectedProducts], () => {
-  setTimeout(renderChart, 100)
+watch([() => props.chartData, () => props.selectedProducts], async () => {
+  await nextTick()
+  renderChart()
 }, { deep: true })
 
-onMounted(() => {
-  setTimeout(renderChart, 100)
+onMounted(async () => {
+  await nextTick()
+  renderChart()
 })
 </script> 

@@ -9,6 +9,19 @@ import {
   userPreferences,
   cacheManager
 } from '../api/dashboard.js'
+import { 
+  fetchSalesOrders, 
+  processSalesOrderData, 
+  calculateAttributionMetrics,
+  getTrafficSourceSummary,
+  salesOrderCacheManager,
+  calculateBranchMetrics
+} from '../api/salesOrders.js'
+import { 
+  fetchLeadsRatio, 
+  applySplitByBranch,
+  leadsRatioCacheManager
+  } from '../api/leadsRatio.js'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   // State
@@ -17,32 +30,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const currentSort = ref({ column: null, direction: 'asc' })
   const searchQuery = ref('')
   
-  // Date range state - initialize with yesterday
-  const dateRange = ref('yesterday')
+  // Date range state - initialize with last7days for better demo data
+  const dateRange = ref('last7days')
   const startDate = ref('')
   const endDate = ref('')
-  
-  // Initialize date range immediately
-  const initializeDateRange = () => {
-    const today = new Date()
-    const jakartaToday = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }))
-    const yesterday = new Date(jakartaToday)
-    yesterday.setDate(yesterday.getDate() - 1)
-    
-    const formatDateString = (date) => {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-    
-    startDate.value = formatDateString(yesterday)
-    endDate.value = formatDateString(yesterday)
-    console.log('Initial date range set to yesterday:', startDate.value, 'to', endDate.value)
-  }
-  
-  // Set initial date range immediately
-  initializeDateRange()
   
   // UI state
   const showColumnMenu = ref(false)
@@ -76,13 +67,19 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const dashboardQuery = useQuery({
     queryKey: ['dashboard-data'],
     queryFn: async () => {
+      console.log('Dashboard query function called')
       try {
-        return await fetchDashboardData()
+        const data = await fetchDashboardData()
+        console.log('Dashboard data fetched successfully:', data.length, 'records')
+        return data
       } catch (error) {
+        console.log('Dashboard query error:', error)
         if (error.useSampleData) {
           console.log('Using sample data as fallback')
           useSampleDataFallback.value = true
-          return generateSampleData()
+          const sampleData = generateSampleData()
+          console.log('Generated sample data:', sampleData.length, 'records')
+          return sampleData
         }
         throw error
       }
@@ -94,6 +91,54 @@ export const useDashboardStore = defineStore('dashboard', () => {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: true
+  })
+
+  // Sales Order Query
+  const salesOrderQuery = useQuery({
+    queryKey: ['sales-orders', startDate, endDate],
+    queryFn: async () => {
+      try {
+        const rawData = await fetchSalesOrders(startDate.value, endDate.value)
+        return processSalesOrderData(rawData)
+      } catch (error) {
+        console.error('Error fetching sales orders:', error)
+        return [] // Return empty array on error
+      }
+    },
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 4 * 60 * 60 * 1000, // 4 hours
+    cacheTime: 24 * 60 * 60 * 1000, // 24 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: true,
+    enabled: computed(() => !!startDate.value && !!endDate.value)
+  })
+
+  // Leads Ratio Query - ONLY use real API data, no fallbacks
+  const leadsRatioQuery = useQuery({
+    queryKey: ['leads-ratio', startDate, endDate],
+    queryFn: async () => {
+      console.log(`📅 LEADS DEBUG: Fetching REAL leads data for ${startDate.value} to ${endDate.value}`)
+      console.log(`📅 LEADS DEBUG: Date range details:`, {
+        startDate: startDate.value,
+        endDate: endDate.value,
+        dateRange: dateRange.value,
+        expectedDate: '2025-07-18',
+        isExpectedDate: startDate.value === '2025-07-18' && endDate.value === '2025-07-18'
+      })
+      const data = await fetchLeadsRatio(startDate.value, endDate.value)
+      console.log('✅ LEADS DEBUG: Real leads data received:', data)
+      return data
+    },
+    retry: 3, // Increased retries for better reliability
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 4 * 60 * 60 * 1000, // 4 hours
+    cacheTime: 24 * 60 * 60 * 1000, // 24 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: true,
+    enabled: computed(() => !!startDate.value && !!endDate.value)
   })
 
   // Computed properties with optimized memoization
@@ -108,11 +153,56 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   // Raw data from query
-  const allData = computed(() => dashboardQuery.data.value || [])
+  const allData = computed(() => {
+    const data = dashboardQuery.data.value || []
+    console.log('allData computed:', { 
+      length: data.length, 
+      loading: dashboardQuery.isLoading.value,
+      error: dashboardQuery.error.value,
+      usingSampleData: useSampleDataFallback.value
+    })
+    return data
+  })
+  
+  // Sales order data
+  const salesOrderData = computed(() => salesOrderQuery.data.value || [])
+  
+  // Leads ratio data - ONLY real API data
+  const leadsRatioData = computed(() => {
+    const data = leadsRatioQuery.data.value
+    if (data && !data.error && data.totalLeads !== undefined) {
+      console.log('Using REAL leads ratio data:', data.totalLeads, 'leads')
+      return data
+    }
+    return null // Return null if no valid data
+  })
+
+  // Leads ratio loading and error states
+  const leadsRatioLoading = computed(() => leadsRatioQuery.isLoading.value)
+  const leadsRatioError = computed(() => {
+    if (leadsRatioQuery.error.value) {
+      return `Failed to load leads data: ${leadsRatioQuery.error.value.message}`
+    }
+    return null
+  })
+  
+  // Branch performance metrics computed from real sales order data
+  const branchPerformanceData = computed(() => {
+    if (!salesOrderData.value.length || !metrics.value) return null
+    
+    return calculateBranchMetrics(salesOrderData.value, metrics.value, leadsRatioData.value)
+  })
   
   // Date filtered data with memoization
   const data = computed(() => {
-    return filterDataByDateRange(allData.value, startDate.value, endDate.value)
+    const filtered = filterDataByDateRange(allData.value, startDate.value, endDate.value)
+    console.log('data computed (after date filtering):', { 
+      originalLength: allData.value.length, 
+      filteredLength: filtered.length,
+      startDate: startDate.value,
+      endDate: endDate.value 
+    })
+    return filtered
   })
 
   // Loading and error states from query
@@ -140,10 +230,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
       return []
     }
     
-    // If no products are selected, return empty array (let the apply button handle selection)
+    // If no products are selected, show all data instead of empty array
     if (selectedProducts.value.length === 0) {
-      console.log('No products selected, returning empty array')
-      return []
+      console.log('No products selected, showing all data')
+      return data.value
     }
     
     // Filter data based on selected products
@@ -174,7 +264,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Optimized grouping with better performance
   const groupedData = computed(() => {
-    if (!filteredData.value.length) return []
+    console.log('groupedData computed - filteredData length:', filteredData.value.length)
+    console.log('groupedData computed - groupByMode:', groupByMode.value)
+    
+    if (!filteredData.value.length) {
+      console.log('No filtered data, returning empty array')
+      return []
+    }
     
     const grouped = new Map() // Use Map for better performance
     
@@ -244,6 +340,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
       group.cost_per_add_to_cart = group.add_to_cart > 0 ? group.spend / group.add_to_cart : 0
     })
     
+    console.log('groupedData result:', { 
+      groups: result.length,
+      firstGroup: result[0]?.label,
+      totalSpend: result.reduce((sum, g) => sum + g.spend, 0)
+    })
+    
     return result
   })
 
@@ -276,47 +378,66 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Optimized metrics calculation
   const metrics = computed(() => {
+    console.log('metrics computed - groupedData length:', groupedData.value.length)
+    console.log('metrics computed - filteredData length:', filteredData.value.length)
+    
     if (!groupedData.value.length) {
+      console.log('No grouped data, returning zero metrics')
       return {
         spend: 0,
+        reach: 0,
+        impressions: 0,
+        frequency: 0,
+        cpm: 0,
+        ctr: 0,
         conversations: 0,
         add_to_cart: 0,
         purchases: 0,
         cost_per_conversation: 0,
+        cost_per_add_to_cart: 0,
         cost_per_purchase: 0,
         purchase_value: 0,
-        avgCpm: 0,
         roas: 0
       }
     }
 
     const totals = groupedData.value.reduce((acc, item) => ({
       spend: acc.spend + item.spend,
+      reach: acc.reach + item.reach,
+      impressions: acc.impressions + item.impressions,
       conversations: acc.conversations + item.conversations,
       add_to_cart: acc.add_to_cart + item.add_to_cart,
       purchases: acc.purchases + item.purchases,
-      purchase_value: acc.purchase_value + item.purchase_value,
-      impressions: acc.impressions + item.impressions
+      purchase_value: acc.purchase_value + item.purchase_value
     }), {
       spend: 0,
+      reach: 0,
+      impressions: 0,
       conversations: 0,
       add_to_cart: 0,
       purchases: 0,
-      purchase_value: 0,
-      impressions: 0
+      purchase_value: 0
     })
 
-    return {
+    const calculatedMetrics = {
       spend: totals.spend,
+      reach: totals.reach,
+      impressions: totals.impressions,
+      frequency: totals.reach > 0 ? totals.impressions / totals.reach : 0,
+      cpm: totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : 0,
+      ctr: totals.impressions > 0 ? (totals.conversations / totals.impressions) * 100 : 0,
       conversations: totals.conversations,
       add_to_cart: totals.add_to_cart,
       purchases: totals.purchases,
       cost_per_conversation: totals.conversations > 0 ? totals.spend / totals.conversations : 0,
+      cost_per_add_to_cart: totals.add_to_cart > 0 ? totals.spend / totals.add_to_cart : 0,
       cost_per_purchase: totals.purchases > 0 ? totals.spend / totals.purchases : 0,
       purchase_value: totals.purchase_value,
-      avgCpm: totals.impressions > 0 ? (totals.spend / totals.impressions) * 1000 : 0,
       roas: totals.spend > 0 ? totals.purchase_value / totals.spend : 0
     }
+    
+    console.log('metrics computed result:', calculatedMetrics)
+    return calculatedMetrics
   })
 
   // Enhanced chart data with better performance
@@ -347,6 +468,50 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
     // Convert Map to object with date keys
     return Object.fromEntries(grouped)
+  })
+
+  // Attribution metrics combining FB ads and sales order data
+  const attributionMetrics = computed(() => {
+    console.log('attributionMetrics computed:', { 
+      salesOrdersLength: salesOrderData.value.length,
+      hasMetrics: !!metrics.value,
+      metricsSpend: metrics.value?.spend 
+    })
+    
+    if (!salesOrderData.value.length || !metrics.value) {
+      console.log('No sales data or metrics, returning zero attribution metrics')
+      return {
+        fbAttributedRevenue: 0,
+        fbAttributedOrders: 0,
+        avgOrderValue: 0,
+        trueROAS: 0,
+        conversionRate: 0
+      }
+    }
+
+    const result = calculateAttributionMetrics(salesOrderData.value, metrics.value)
+    console.log('attributionMetrics result:', result)
+    return result
+  })
+
+  // Total sales revenue from Facebook/Instagram ads only
+  const totalSalesRevenue = computed(() => {
+    const fbOrders = salesOrderData.value.filter(order => 
+      order.customer_sumber_info === 'fb_ads' || order.customer_sumber_info === 'ig_ads'
+    )
+    const revenue = fbOrders.reduce((sum, order) => sum + order.orderValue, 0)
+    console.log('totalSalesRevenue computed:', { 
+      totalOrders: salesOrderData.value.length,
+      fbOrders: fbOrders.length,
+      fbRevenue: revenue
+    })
+    return revenue
+  })
+
+  // Traffic source breakdown
+  const trafficSourceSummary = computed(() => {
+    if (!salesOrderData.value.length) return []
+    return getTrafficSourceSummary(salesOrderData.value)
   })
 
   // User preferences management
@@ -553,7 +718,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     loadPreferences()
     
     // Always sync dates with the current dateRange (whether from preferences or default)
-    const currentRange = dateRange.value || 'yesterday'
+    const currentRange = dateRange.value || 'last7days'
     setDateRange(currentRange)
     
     // Update selected products when data changes
@@ -561,9 +726,17 @@ export const useDashboardStore = defineStore('dashboard', () => {
     
     // Preload data in background
     cacheManager.preload()
+    salesOrderCacheManager.preload()
   }
 
   const updateSelectedProducts = () => {
+    console.log('updateSelectedProducts called:', {
+      productOptionsLength: productOptions.value.length,
+      selectedProductsLength: selectedProducts.value.length,
+      productOptions: productOptions.value,
+      selectedProducts: selectedProducts.value
+    })
+    
     // Initialize selected products to all products when data is available and none are selected
     if (productOptions.value.length > 0 && selectedProducts.value.length === 0) {
       selectedProducts.value = [...productOptions.value]
@@ -575,15 +748,48 @@ export const useDashboardStore = defineStore('dashboard', () => {
     dateRange.value = 'custom'
   }
 
+  const setCustomDateRange = (start, end) => {
+    startDate.value = start
+    endDate.value = end
+    dateRange.value = 'custom'
+    console.log('Custom date range set:', { startDate: start, endDate: end })
+  }
+
   const useSampleData = () => {
     useSampleDataFallback.value = true
     dashboardQuery.refetch()
   }
 
   // Cache management utilities
-  const getCacheInfo = () => cacheManager.getInfo()
-  const clearAllCaches = () => cacheManager.clearAll()
-  const refreshData = () => cacheManager.refresh()
+  const getCacheInfo = () => {
+    return {
+      fbAds: cacheManager.getInfo(),
+      salesOrders: salesOrderCacheManager.getCacheInfo()
+    }
+  }
+  
+  const clearAllCaches = () => {
+    console.log('Clearing all caches (FB ads + sales orders)...')
+    cacheManager.clearAll()
+    salesOrderCacheManager.clearAll()
+  }
+  
+  const refreshData = () => {
+    console.log('Refreshing all data...')
+    cacheManager.refresh()
+    
+    // Refresh sales orders if date range is available
+    if (startDate.value && endDate.value) {
+      salesOrderCacheManager.refresh(startDate.value, endDate.value)
+    }
+  }
+  
+  const refreshSalesOrders = () => {
+    if (startDate.value && endDate.value) {
+      console.log('Refreshing sales orders only...')
+      return salesOrderCacheManager.refresh(startDate.value, endDate.value)
+    }
+  }
 
   // Watch for data changes to update products
   watch([allData, productOptions], updateSelectedProducts, { immediate: true })
@@ -622,11 +828,20 @@ export const useDashboardStore = defineStore('dashboard', () => {
     productOptions,
     metrics,
     chartData,
+    salesOrderData,
+    attributionMetrics,
+    totalSalesRevenue,
+    trafficSourceSummary,
+    leadsRatioData,
+    leadsRatioLoading,
+    leadsRatioError,
+    branchPerformanceData,
     
     // Actions
     generateSampleData: generateSampleDataAction,
     refetchData,
     setDateRange,
+    setCustomDateRange,
     handleSort,
     moveColumn,
     toggleColumnMenu,
@@ -644,6 +859,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     // Cache management
     getCacheInfo,
     clearAllCaches,
-    refreshData
+    refreshData,
+    refreshSalesOrders
   }
 }) 

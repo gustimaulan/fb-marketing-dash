@@ -1,0 +1,296 @@
+// API service for leads ratio data to split campaign performance by branch
+const LEADS_RATIO_API = import.meta.env.VITE_LEADS_RATIO_API_URL || 'https://workflows.cekat.ai/webhook/leads-ratio'
+
+// Caching configuration
+const CACHE_DURATION = 4 * 60 * 60 * 1000 // 4 hours - same as other APIs
+const requestCache = new Map()
+
+// Storage keys for leads ratio caching
+const STORAGE_KEYS = {
+  LEADS_RATIO_DATA: 'leads_ratio_data',
+  LEADS_RATIO_CACHE_TIMESTAMP: 'leads_ratio_cache_timestamp'
+}
+
+// Cache utilities for leads ratio
+const cacheUtils = {
+  setCache: (key, data) => {
+    try {
+      const cacheData = {
+        data,
+        timestamp: Date.now()
+      }
+      localStorage.setItem(key, JSON.stringify(cacheData))
+      console.log(`Leads ratio data cached with key: ${key}`)
+    } catch (error) {
+      console.warn('Failed to cache leads ratio data:', error)
+    }
+  },
+
+  getCache: (key) => {
+    try {
+      const cached = localStorage.getItem(key)
+      if (!cached) return null
+
+      const { data, timestamp } = JSON.parse(cached)
+      if (Date.now() - timestamp > CACHE_DURATION) {
+        console.log('Leads ratio cache expired, removing:', key)
+        localStorage.removeItem(key)
+        return null
+      }
+
+      console.log('Using cached leads ratio data:', key)
+      return data
+    } catch (error) {
+      console.warn('Failed to read leads ratio cache:', error)
+      return null
+    }
+  },
+
+  clearCache: (key) => {
+    try {
+      localStorage.removeItem(key)
+      console.log('Leads ratio cache cleared:', key)
+    } catch (error) {
+      console.warn('Failed to clear leads ratio cache:', error)
+    }
+  }
+}
+
+// Cache manager for leads ratio
+export const leadsRatioCacheManager = {
+  getCacheInfo: () => {
+    const cacheInfo = {}
+    
+    // Check each storage key
+    Object.entries(STORAGE_KEYS).forEach(([key, storageKey]) => {
+      const cached = localStorage.getItem(storageKey)
+      if (cached) {
+        try {
+          const { timestamp } = JSON.parse(cached)
+          const age = Date.now() - timestamp
+          const isExpired = age > CACHE_DURATION
+          
+          cacheInfo[key] = {
+            age,
+            isExpired,
+            timestamp,
+            size: cached.length
+          }
+        } catch (error) {
+          cacheInfo[key] = { error: 'Invalid cache data' }
+        }
+      }
+    })
+    
+    return cacheInfo
+  },
+
+  clearAll: () => {
+    console.log('🧹 LEADS DEBUG: Clearing all leads ratio cache')
+    Object.values(STORAGE_KEYS).forEach(key => {
+      cacheUtils.clearCache(key)
+      console.log(`🧹 LEADS DEBUG: Cleared cache key: ${key}`)
+    })
+    requestCache.clear()
+    console.log('🧹 LEADS DEBUG: Cleared in-memory request cache')
+  },
+
+  // Add debug helper function
+  debugLeadsData: () => {
+    console.log('🔍 LEADS DEBUG: Current cache status:')
+    const info = leadsRatioCacheManager.getCacheInfo()
+    console.log('Cache info:', info)
+    console.log('In-memory cache size:', requestCache.size)
+    console.log('Storage keys:', STORAGE_KEYS)
+    return info
+  }
+}
+
+// Fetch leads ratio data from API
+export const fetchLeadsRatio = async (startDate, endDate) => {
+  const cacheKey = `${STORAGE_KEYS.LEADS_RATIO_DATA}_${startDate}_${endDate}`
+  
+  // Check cache first
+  const cachedData = cacheUtils.getCache(cacheKey)
+  if (cachedData) {
+    return cachedData
+  }
+
+  // Check in-memory cache for ongoing requests
+  const requestKey = `${startDate}_${endDate}`
+  if (requestCache.has(requestKey)) {
+    console.log('Using in-memory cache for leads ratio request')
+    return requestCache.get(requestKey)
+  }
+
+  console.log('🔍 LEADS DEBUG: Fetching leads ratio data from API:', startDate, 'to', endDate)
+  
+  try {
+    const url = `${LEADS_RATIO_API}?date-from=${startDate}&date-to=${endDate}`
+    console.log('🌐 LEADS DEBUG: API URL:', url)
+    const response = await fetch(url)
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+    }
+    
+    const rawData = await response.json()
+    console.log('📥 LEADS DEBUG: Raw API response:', rawData)
+    console.log('📊 LEADS DEBUG: Response structure:', {
+      isArray: Array.isArray(rawData),
+      length: rawData?.length,
+      firstItem: rawData?.[0]
+    })
+    
+    // Extract data from the response array
+    const responseData = rawData[0] // API returns array with single object
+    
+    if (responseData.status !== 200) {
+      throw new Error(`API returned error: ${responseData.message}`)
+    }
+    
+    const processedData = processLeadsRatioData(responseData.data)
+    
+    // Cache the processed data
+    cacheUtils.setCache(cacheKey, processedData)
+    requestCache.set(requestKey, processedData)
+    
+    // Clean up request cache after 30 seconds
+    setTimeout(() => {
+      requestCache.delete(requestKey)
+    }, 30000)
+    
+    console.log('Processed leads ratio data:', processedData)
+    return processedData
+    
+  } catch (error) {
+    console.error('Error fetching leads ratio data:', error)
+    requestCache.delete(requestKey)
+    
+    // Don't use fallback data - return null to indicate API failure
+    throw new Error(`Failed to fetch leads data: ${error.message}`)
+  }
+}
+
+// Process raw leads ratio data into structured format
+const processLeadsRatioData = (rawData) => {
+  console.log('🔧 LEADS DEBUG: Processing raw data:', rawData)
+  
+  const branches = rawData.map(branch => {
+    const processed = {
+      name: branch.label_group,
+      total: parseInt(branch.total),
+      percentage: parseFloat(branch.percentage),
+      ratio: parseFloat(branch.percentage) / 100,
+      purchases: parseInt(branch.purchase) || 0
+    }
+    console.log(`🏢 LEADS DEBUG: Branch processed - ${processed.name}: ${processed.total} leads`)
+    return processed
+  })
+  
+  const totalLeads = branches.reduce((sum, branch) => sum + branch.total, 0)
+  const totalPurchases = branches.reduce((sum, branch) => sum + branch.purchases, 0)
+  
+  console.log('🔢 LEADS DEBUG: Calculation breakdown:')
+  console.log('  - Individual branches:', branches.map(b => `${b.name}: ${b.total}`).join(', '))
+  console.log(`  - Total calculated: ${totalLeads} (expected: 19, actual: ${totalLeads})`)
+  console.log(`  - Difference: ${totalLeads - 19}`)
+  
+  const result = {
+    branches,
+    totalLeads,
+    totalPurchases,
+    lastUpdated: new Date().toISOString()
+  }
+  
+  console.log('✅ LEADS DEBUG: Final processed data:', result)
+  return result
+}
+
+// Apply branch ratios to split campaign metrics (REAL DATA ONLY)
+export const applySplitByBranch = (metrics, branchRatios) => {
+  if (!branchRatios || !branchRatios.branches) {
+    return null
+  }
+  
+  return branchRatios.branches.map(branch => {
+    // Real data points
+    const actualPurchases = branch.purchases || 0
+    const actualLeads = branch.total || 0
+    const spendForBranch = metrics.spend * branch.ratio
+    const revenueForBranch = metrics.purchase_value * branch.ratio
+    
+    return {
+      branchName: branch.name,
+      ratio: branch.ratio,
+      percentage: branch.percentage,
+      actualPurchases: actualPurchases,
+      actualLeads: actualLeads,
+      
+      // BUSINESS METRICS for budget allocation decisions
+      metrics: {
+        // === FINANCIAL ALLOCATION ===
+        spend: spendForBranch,
+        revenue: revenueForBranch,
+        profit: revenueForBranch - spendForBranch,
+        roas: spendForBranch > 0 ? revenueForBranch / spendForBranch : 0,
+        
+        // === LEAD ECONOMICS ===
+        leads: actualLeads,
+        purchases: actualPurchases,
+        cost_per_lead: actualLeads > 0 ? spendForBranch / actualLeads : 0,
+        cost_per_purchase: actualPurchases > 0 ? spendForBranch / actualPurchases : 0,
+        
+        // === EFFICIENCY METRICS ===
+        conversion_rate: actualLeads > 0 ? (actualPurchases / actualLeads) * 100 : 0,
+        revenue_per_lead: actualLeads > 0 ? revenueForBranch / actualLeads : 0,
+        revenue_per_purchase: actualPurchases > 0 ? revenueForBranch / actualPurchases : 0,
+        
+        // === BUDGET RECOMMENDATIONS ===
+        // Suggested budget allocation based on performance
+        efficiency_score: actualLeads > 0 && spendForBranch > 0 ? 
+          (revenueForBranch / spendForBranch) * (actualPurchases / actualLeads) * 100 : 0,
+        recommended_budget_share: 0 // Will be calculated in component
+      }
+    }
+  })
+}
+
+// Generate sample leads ratio data for testing - DISABLED
+export const generateSampleLeadsRatio = () => {
+  console.warn('Sample leads data generation is DISABLED - use real API only')
+  throw new Error('Sample data disabled - use real leads-ratio API only')
+}
+
+// Global debug function - call from browser console
+window.debugLeads = async (startDate = '2025-07-18', endDate = '2025-07-18') => {
+  console.log('🚀 LEADS DEBUGGER: Starting debug session...')
+  console.log(`📅 Target date range: ${startDate} to ${endDate}`)
+  
+  // Clear cache first
+  leadsRatioCacheManager.clearAll()
+  
+  try {
+    // Make fresh API call
+    console.log('🔄 Making fresh API call...')
+    const data = await fetchLeadsRatio(startDate, endDate)
+    
+    console.log('📋 SUMMARY:')
+    console.log(`  Expected: 19 leads`)
+    console.log(`  Actual: ${data.totalLeads} leads`)
+    console.log(`  Difference: ${data.totalLeads - 19}`)
+    console.log(`  Branches: ${data.branches?.length || 0}`)
+    
+    if (data.branches) {
+      console.log('🏢 Branch breakdown:')
+      data.branches.forEach(branch => {
+        console.log(`  - ${branch.name}: ${branch.total} leads (${branch.percentage}%)`)
+      })
+    }
+    
+    return data
+  } catch (error) {
+    console.error('❌ Debug failed:', error)
+    return { error: error.message }
+  }
+} 

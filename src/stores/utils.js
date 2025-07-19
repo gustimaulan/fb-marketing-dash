@@ -29,6 +29,11 @@ export const useUtilsStore = defineStore('utils', () => {
     }).format(new Date(dateString))
   }
 
+  const formatPercentage = (value) => {
+    if (value === null || value === undefined || isNaN(value)) return '0%'
+    return `${(value * 100).toFixed(1)}%`
+  }
+
   const formatValue = (value, column) => {
     if (value === null || value === undefined) return '-'
     
@@ -59,6 +64,7 @@ export const useUtilsStore = defineStore('utils', () => {
     formatCurrency,
     formatNumber,
     formatDate,
+    formatPercentage,
     formatValue
   }
 }) 

@@ -1,6 +1,7 @@
 // API functions for dashboard data fetching with enhanced caching
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbxXsepwekS2OTsD-EuQqQeRsK4q8JWcqfNNO526xR_ItNUVuKKXrzdwah6I_upUeVi6/exec'
+// Use environment variables for API endpoints
+const API_URL = import.meta.env.VITE_DASHBOARD_API_URL || 'https://script.google.com/macros/s/AKfycbxXsepwekS2OTsD-EuQqQeRsK4q8JWcqfNNO526xR_ItNUVuKKXrzdwah6I_upUeVi6/exec'
 
 // In-memory cache for request deduplication
 const requestCache = new Map()
@@ -155,12 +156,13 @@ const fetchWithCache = async (url, options = {}) => {
 }
 
 // Generate sample data function (optimized with memoization)
-let memoizedSampleData = null
+let memoizedSampleData = null // Clear cache for updated sample data
 export const generateSampleData = () => {
-  if (memoizedSampleData) {
-    console.log('Using memoized sample data')
-    return memoizedSampleData
-  }
+  // Temporarily disable memoization during development
+  // if (memoizedSampleData) {
+  //   console.log('Using memoized sample data')
+  //   return memoizedSampleData
+  // }
 
   console.log('Generating new sample data')
   const products = ['Tune Up', 'Oil Change', 'AC Service', 'Brake Service', 'Car Wash']
@@ -182,8 +184,22 @@ export const generateSampleData = () => {
     currentDate.setDate(currentDate.getDate() + 1)
   }
   
+  // Ensure we have data for today and yesterday for reliable demo
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const todayStr = formatDateString(today)
+  const yesterdayStr = formatDateString(yesterday)
+  
   for (let i = 0; i < 200; i++) {
-    const randomDate = dateRange[Math.floor(Math.random() * dateRange.length)]
+    let randomDate;
+    
+    // Force 30% of records to be from today/yesterday for demo reliability
+    if (i < 60) {
+      randomDate = i % 2 === 0 ? todayStr : yesterdayStr
+    } else {
+      randomDate = dateRange[Math.floor(Math.random() * dateRange.length)]
+    }
     const product = products[Math.floor(Math.random() * products.length)]
     const prefix = prefixes[Math.floor(Math.random() * prefixes.length)]
     const price = prices[Math.floor(Math.random() * prices.length)]
@@ -210,6 +226,12 @@ export const generateSampleData = () => {
   }
   
   memoizedSampleData = sampleData
+  console.log('Generated sample data:', { 
+    totalRecords: sampleData.length,
+    todayRecords: sampleData.filter(d => d.date_start.startsWith(todayStr)).length,
+    yesterdayRecords: sampleData.filter(d => d.date_start.startsWith(yesterdayStr)).length,
+    dateRange: { todayStr, yesterdayStr }
+  })
   return sampleData
 }
 

@@ -1,37 +1,148 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
-/* Custom styles matching the original dashboard */
-.sticky-column {
-  position: sticky;
-  left: 0;
-  z-index: 10;
-  background: white;
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
-}
+/* Custom styles for enhanced spacing and UX */
 
-.sort-arrow {
-  display: inline-block;
-  margin-left: 4px;
-  font-size: 12px;
-  transition: transform 0.2s ease;
-}
-
-.sort-arrow.asc {
-  transform: rotate(180deg);
-}
-
+/* Loading spinner animation */
 .loading-spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 2s linear infinite;
+  @apply inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* Smooth transitions for interactive elements */
+.transition-all-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced card hover effects */
+.card-hover {
+  @apply transform transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+}
+
+/* Better focus states for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+/* Improved button spacing and hover states */
+.btn-primary {
+  @apply px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200;
+}
+
+.btn-secondary {
+  @apply px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200;
+}
+
+/* Consistent spacing for sections */
+.section-spacing {
+  @apply space-y-6 md:space-y-8;
+}
+
+/* Enhanced scrollbar styling */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f9fafb;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded hover:bg-gray-400;
+}
+
+/* Improved table spacing */
+.table-cell-padding {
+  @apply px-4 py-3 md:px-6 md:py-4;
+}
+
+/* Better responsive typography */
+.responsive-text {
+  @apply text-sm md:text-base;
+}
+
+.responsive-heading {
+  @apply text-lg md:text-xl lg:text-2xl;
+}
+
+/* Enhanced dropdown animations */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.2s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
+/* Better form input spacing */
+.form-input {
+  @apply px-3 py-2 border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500;
+}
+
+/* Consistent card spacing */
+.card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6;
+}
+
+.card-compact {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-3 md:p-4;
+}
+
+/* Grid responsive improvements */
+.grid-responsive {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6;
+}
+
+.grid-responsive-2 {
+  @apply grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6;
+}
+
+/* Better mobile spacing */
+@media (max-width: 640px) {
+  .mobile-spacing {
+    @apply px-4 py-3;
+  }
+  
+  .mobile-text {
+    @apply text-sm;
+  }
+}
+
+/* Enhanced tooltip styles */
+.tooltip {
+  @apply invisible absolute z-20 px-2 py-1 text-xs text-white bg-gray-900 rounded-md opacity-0 transition-opacity duration-200;
+}
+
+.tooltip-trigger:hover .tooltip {
+  @apply visible opacity-100;
+}
+
+/* Better status indicators */
+.status-indicator {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.status-warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.status-error {
+  @apply bg-red-100 text-red-800;
+}
+
+.status-info {
+  @apply bg-blue-100 text-blue-800;
 } 
