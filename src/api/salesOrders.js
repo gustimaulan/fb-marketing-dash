@@ -20,7 +20,6 @@ const cacheUtils = {
         timestamp: Date.now()
       }
       localStorage.setItem(key, JSON.stringify(cacheData))
-      console.log(`Sales order data cached with key: ${key}`)
     } catch (error) {
       console.warn('Failed to cache sales order data:', error)
     }
@@ -33,12 +32,9 @@ const cacheUtils = {
 
       const { data, timestamp } = JSON.parse(cached)
       if (Date.now() - timestamp > CACHE_DURATION) {
-        console.log('Sales order cache expired, removing:', key)
         localStorage.removeItem(key)
         return null
       }
-
-      console.log('Using cached sales order data:', key)
       return data
     } catch (error) {
       console.warn('Failed to read sales order cache:', error)
@@ -46,14 +42,13 @@ const cacheUtils = {
     }
   },
 
-  clearCache: (key) => {
-    try {
-      localStorage.removeItem(key)
-      console.log('Sales order cache cleared:', key)
-    } catch (error) {
-      console.warn('Failed to clear sales order cache:', error)
-    }
-  },
+      clearCache: (key) => {
+      try {
+        localStorage.removeItem(key)
+      } catch (error) {
+        console.warn('Failed to clear sales order cache:', error)
+      }
+    },
 
   getCacheInfo: (key) => {
     try {
@@ -85,7 +80,6 @@ const fetchSalesOrdersWithCache = async (dateFrom, dateTo, options = {}) => {
   if (requestCache.has(cacheKey)) {
     const cached = requestCache.get(cacheKey)
     if (Date.now() - cached.timestamp < 60000) { // 1 minute for request deduplication
-      console.log('Using in-memory cache for sales orders:', cacheKey)
       return cached.data
     }
     requestCache.delete(cacheKey)
@@ -94,12 +88,10 @@ const fetchSalesOrdersWithCache = async (dateFrom, dateTo, options = {}) => {
   // Check localStorage cache
   const cachedData = cacheUtils.getCache(cacheKey)
   if (cachedData && !options.forceFresh) {
-    console.log('Using localStorage cache for sales orders:', cacheKey)
     return cachedData
   }
 
   // Make fresh request
-  console.log('Making fresh sales order API request:', url)
   
   try {
     const response = await fetch(url)
@@ -258,8 +250,6 @@ export const salesOrderCacheManager = {
 
   // Force refresh data for specific date range
   refresh: async (dateFrom, dateTo) => {
-    console.log(`Refreshing sales order data for ${dateFrom} to ${dateTo}...`)
-    
     // Clear specific cache
     const cacheKey = `sales_orders_${dateFrom}_${dateTo}`
     cacheUtils.clearCache(cacheKey)
@@ -273,8 +263,6 @@ export const salesOrderCacheManager = {
 
   // Preload data for common date ranges
   preload: async () => {
-    console.log('Preloading sales order data for common date ranges...')
-    
     const today = new Date()
     const formatDate = (date) => {
       const year = date.getFullYear()
@@ -306,7 +294,7 @@ export const salesOrderCacheManager = {
       try {
         await fetchSalesOrdersWithCache(range.from, range.to)
       } catch (error) {
-        console.log(`Failed to preload sales orders for ${range.from} to ${range.to}:`, error)
+        // Silent fail for preload
       }
     })
   }

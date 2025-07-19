@@ -76,12 +76,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
         })
         return data
       } catch (error) {
-        console.log('Dashboard query error:', error)
         if (error.useSampleData) {
-          console.log('Using sample data as fallback')
           useSampleDataFallback.value = true
           const sampleData = generateSampleData()
-          console.log('Generated sample data:', sampleData.length, 'records')
           return sampleData
         }
         throw error
@@ -159,7 +156,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const leadsRatioData = computed(() => {
     const data = leadsRatioQuery.data.value
     if (data && !data.error && data.totalLeads !== undefined) {
-      console.log('Using REAL leads ratio data:', data.totalLeads, 'leads')
       return data
     }
     return null // Return null if no valid data
@@ -184,16 +180,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   // Data is already filtered by the API call, no need to filter again
   const data = computed(() => {
     // Since we pass date ranges to the API, allData already contains the correct date range
-    const apiData = allData.value || []
-    console.log('data computed (API already filtered):', { 
-      apiDataLength: apiData.length,
-      startDate: startDate.value,
-      endDate: endDate.value,
-      firstRecordDate: apiData[0]?.date_start || 'no records',
-      lastRecordDate: apiData[apiData.length - 1]?.date_start || 'no records',
-      dateRangeSpan: apiData.length > 0 ? `${apiData[0]?.date_start} to ${apiData[apiData.length - 1]?.date_start}` : 'no data'
-    })
-    return apiData
+    return allData.value || []
   })
 
   // Loading and error states from query
@@ -219,38 +206,24 @@ export const useDashboardStore = defineStore('dashboard', () => {
   })
 
   const filteredData = computed(() => {
-    console.log('filteredData computed - data length:', data.value.length)
-    console.log('filteredData computed - selectedProducts:', selectedProducts.value)
-    
     if (!data.value.length) {
-      console.log('No data available')
       return []
     }
     
-    // Extract all available products for debugging
+    // Extract all available products
     const availableProducts = data.value.map(row => extractProductName(row.ad_name))
     const uniqueProducts = [...new Set(availableProducts)]
-    console.log('Available products:', uniqueProducts)
     
     // If no products are selected, show all data instead of empty array
     if (selectedProducts.value.length === 0) {
-      console.log('No products selected, showing all data')
       return data.value
     }
     
     // Filter data based on selected products
-    console.log('Filtering data by selected products')
     let filtered = data.value.filter(row => {
       const productName = extractProductName(row.ad_name)
       const isIncluded = selectedProducts.value.includes(productName)
       return isIncluded
-    })
-    
-    console.log('Product filtering result:', { 
-      originalCount: data.value.length,
-      filteredCount: filtered.length,
-      selectedProducts: selectedProducts.value,
-      availableProducts: uniqueProducts.slice(0, 5) // Show first 5
     })
     
     // Apply search filter
@@ -270,11 +243,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Optimized grouping with better performance
   const groupedData = computed(() => {
-    console.log('groupedData computed - filteredData length:', filteredData.value.length)
-    console.log('groupedData computed - groupByMode:', groupByMode.value)
-    
     if (!filteredData.value.length) {
-      console.log('No filtered data, returning empty array')
       return []
     }
     
@@ -346,12 +315,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
       group.cost_per_add_to_cart = group.add_to_cart > 0 ? group.spend / group.add_to_cart : 0
     })
     
-    console.log('groupedData result:', { 
-      groups: result.length,
-      firstGroup: result[0]?.label,
-      totalSpend: result.reduce((sum, g) => sum + g.spend, 0)
-    })
-    
     return result
   })
 
@@ -384,11 +347,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Optimized metrics calculation
   const metrics = computed(() => {
-    console.log('metrics computed - groupedData length:', groupedData.value.length)
-    console.log('metrics computed - filteredData length:', filteredData.value.length)
-    
     if (!groupedData.value.length) {
-      console.log('No grouped data, returning zero metrics')
       return {
         spend: 0,
         reach: 0,
@@ -442,13 +401,14 @@ export const useDashboardStore = defineStore('dashboard', () => {
       roas: totals.spend > 0 ? totals.purchase_value / totals.spend : 0
     }
     
-    console.log('metrics computed result:', calculatedMetrics)
     return calculatedMetrics
   })
 
   // Enhanced chart data with better performance
   const chartData = computed(() => {
-    if (!filteredData.value.length) return {}
+    if (!filteredData.value.length) {
+      return {}
+    }
 
     // Group by date for chart (aggregate all products per date)
     const grouped = new Map()
@@ -478,14 +438,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Attribution metrics combining FB ads and sales order data
   const attributionMetrics = computed(() => {
-    console.log('attributionMetrics computed:', { 
-      salesOrdersLength: salesOrderData.value.length,
-      hasMetrics: !!metrics.value,
-      metricsSpend: metrics.value?.spend 
-    })
-    
     if (!salesOrderData.value.length || !metrics.value) {
-      console.log('No sales data or metrics, returning zero attribution metrics')
       return {
         fbAttributedRevenue: 0,
         fbAttributedOrders: 0,
@@ -496,7 +449,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
 
     const result = calculateAttributionMetrics(salesOrderData.value, metrics.value)
-    console.log('attributionMetrics result:', result)
     return result
   })
 
@@ -506,11 +458,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
       order.customer_sumber_info === 'fb_ads' || order.customer_sumber_info === 'ig_ads'
     )
     const revenue = fbOrders.reduce((sum, order) => sum + order.orderValue, 0)
-    console.log('totalSalesRevenue computed:', { 
-      totalOrders: salesOrderData.value.length,
-      fbOrders: fbOrders.length,
-      fbRevenue: revenue
-    })
     return revenue
   })
 
@@ -721,26 +668,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
     
     // Update selected products when data changes
     updateSelectedProducts()
-    
-    console.log('✅ Dashboard initialized with:', {
-      dateRange: dateRange.value,
-      startDate: startDate.value,
-      endDate: endDate.value
-    })
   }
 
   const updateSelectedProducts = () => {
-    console.log('updateSelectedProducts called:', {
-      productOptionsLength: productOptions.value.length,
-      selectedProductsLength: selectedProducts.value.length,
-      productOptions: productOptions.value,
-      selectedProducts: selectedProducts.value
-    })
-    
     // Initialize selected products to all products when data is available and none are selected
     if (productOptions.value.length > 0 && selectedProducts.value.length === 0) {
       selectedProducts.value = [...productOptions.value]
-      console.log('Auto-selected all products on initialization:', selectedProducts.value)
     }
   }
 
@@ -752,7 +685,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     startDate.value = start
     endDate.value = end
     dateRange.value = 'custom'
-    console.log('Custom date range set:', { startDate: start, endDate: end })
   }
 
   const useSampleData = () => {
@@ -764,7 +696,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const getCacheInfo = () => {
     return {
       fbAds: metaAdsCacheManager.getInfo(),
-      salesOrders: salesOrderCacheManager.getCacheInfo()
+      salesOrders: salesOrderCacheManager.getCacheInfo(),
+      leadsRatio: leadsRatioCacheManager.getCacheInfo()
     }
   }
   
@@ -772,31 +705,29 @@ export const useDashboardStore = defineStore('dashboard', () => {
     // Clear Pinia cache managers
     metaAdsCacheManager.clearAll()
     salesOrderCacheManager.clearAll()
+    leadsRatioCacheManager.clearAll()
     
     // Clear ALL localStorage dashboard entries
     Object.keys(localStorage).forEach(key => {
       if (key.includes('dashboard') || key.includes('cache') || key.includes('data')) {
-        console.log('🗑️ Removing localStorage key:', key)
         localStorage.removeItem(key)
       }
     })
     
     // Force TanStack Query to invalidate all dashboard queries
     dashboardQuery.invalidateQueries?.()
-    
-    console.log('✅ All caches cleared completely')
   }
   
   const refreshData = () => {
     if (startDate.value && endDate.value) {
       metaAdsCacheManager.refresh(startDate.value, endDate.value)
       salesOrderCacheManager.refresh(startDate.value, endDate.value)
+      leadsRatioCacheManager.refresh(startDate.value, endDate.value)
     }
   }
   
   const refreshSalesOrders = () => {
     if (startDate.value && endDate.value) {
-      console.log('Refreshing sales orders only...')
       return salesOrderCacheManager.refresh(startDate.value, endDate.value)
     }
   }
@@ -833,19 +764,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   // Also watch for data loading completion
   watch(() => dashboardQuery.isLoading.value, (isLoading) => {
     if (!isLoading && allData.value.length > 0) {
-      console.log('Data loading completed, updating selected products')
       updateSelectedProducts()
-    }
-  })
-  
-  // Watch for date changes and log them
-  watch([startDate, endDate], ([newStart, newEnd], [oldStart, oldEnd]) => {
-    if (newStart !== oldStart || newEnd !== oldEnd) {
-      console.log('📅 DATE CHANGE DETECTED:', {
-        from: `${oldStart} to ${oldEnd}`,
-        to: `${newStart} to ${newEnd}`,
-        shouldTriggerNewQuery: true
-      })
     }
   })
 

@@ -138,7 +138,6 @@ const cacheUtils = {
         timestamp: Date.now()
       }
       localStorage.setItem(key, JSON.stringify(cacheData))
-      console.log(`Meta ads data cached with key: ${key}`)
     } catch (error) {
       console.warn('Failed to cache meta ads data:', error)
     }
@@ -151,12 +150,9 @@ const cacheUtils = {
 
       const { data, timestamp } = JSON.parse(cached)
       if (Date.now() - timestamp > CACHE_DURATION) {
-        console.log('Meta ads cache expired, removing:', key)
         localStorage.removeItem(key)
         return null
       }
-
-      console.log('Using cached meta ads data:', key)
       return data
     } catch (error) {
       console.warn('Failed to read meta ads cache:', error)
@@ -164,14 +160,13 @@ const cacheUtils = {
     }
   },
 
-  clearCache: (key) => {
-    try {
-      localStorage.removeItem(key)
-      console.log('Meta ads cache cleared:', key)
-    } catch (error) {
-      console.warn('Failed to clear meta ads cache:', error)
-    }
-  },
+      clearCache: (key) => {
+      try {
+        localStorage.removeItem(key)
+      } catch (error) {
+        console.warn('Failed to clear meta ads cache:', error)
+      }
+    },
 
   getCacheInfo: (key) => {
     try {
@@ -205,7 +200,6 @@ const fetchMetaAdsWithCache = async (dateFrom, dateTo, options = {}) => {
   if (requestCache.has(cacheKey)) {
     const cached = requestCache.get(cacheKey)
     if (Date.now() - cached.timestamp < 60000) { // 1 minute for request deduplication
-      console.log('Using in-memory cache for meta ads:', cacheKey)
       return cached.data
     }
     requestCache.delete(cacheKey)
@@ -214,7 +208,6 @@ const fetchMetaAdsWithCache = async (dateFrom, dateTo, options = {}) => {
   // Check localStorage cache
   const cachedData = cacheUtils.getCache(cacheKey)
   if (cachedData && !options.forceFresh) {
-    console.log('Using localStorage cache for meta ads:', cacheKey)
     return cachedData
   }
 
@@ -270,7 +263,6 @@ export const generateSampleData = () => {
   //   return memoizedSampleData
   // }
 
-  console.log('Generating new sample data')
   const products = ['Tune Up', 'Oil Change', 'AC Service', 'Brake Service', 'Car Wash']
   const prefixes = ['Poster', 'Banner', 'Video', 'Story', 'Carousel']
   const prices = ['99 Ribu', '199 Ribu', '299 Ribu', '399 Ribu', '499 Ribu']
@@ -332,12 +324,6 @@ export const generateSampleData = () => {
   }
   
   memoizedSampleData = sampleData
-  console.log('Generated sample data:', { 
-    totalRecords: sampleData.length,
-    todayRecords: sampleData.filter(d => d.date_start.startsWith(todayStr)).length,
-    yesterdayRecords: sampleData.filter(d => d.date_start.startsWith(yesterdayStr)).length,
-    dateRange: { todayStr, yesterdayStr }
-  })
   return sampleData
 }
 
@@ -385,8 +371,6 @@ export const filterDataByDateRange = (data, startDate, endDate) => {
     return dateFilterCache.get(cacheKey)
   }
   
-  console.log('Filtering data by date range:', { startDate, endDate, dataLength: data.length })
-  
   const filtered = data.filter(row => {
     const rowDate = row.date_start
     if (!rowDate) return false
@@ -401,15 +385,8 @@ export const filterDataByDateRange = (data, startDate, endDate) => {
       dateStr = rowDate
     }
     
-    const isInRange = dateStr >= startDate && dateStr <= endDate
-    if (isInRange) {
-      console.log('Date matched:', { rowDate, dateStr, startDate, endDate })
-    }
-    
-    return isInRange
+    return dateStr >= startDate && dateStr <= endDate
   })
-  
-  console.log('Filtered results:', { originalCount: data.length, filteredCount: filtered.length })
   
   // Cache the result (limit cache size)
   if (dateFilterCache.size > 10) {
@@ -464,7 +441,6 @@ export const cacheManager = {
   preload: async () => {
     try {
       await fetchDashboardData()
-      console.log('Data preloaded successfully')
     } catch (error) {
       console.warn('Preload failed:', error.message)
     }

@@ -94,7 +94,7 @@
     </div>
 
     <!-- Campaign Optimization Suggestions -->
-    <div class="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+    <!-- <div class="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
       <h3 class="text-lg font-medium text-gray-900 mb-4">Optimization Suggestions</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div v-if="optimizationSuggestions.length === 0" class="col-span-full text-sm text-gray-500 text-center py-8">
@@ -132,7 +132,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
     </div>
   </div>
 </template>

@@ -16,7 +16,7 @@ import ProductFilter from './components/shared/ProductFilter.vue'
 import CacheDebugger from './components/shared/CacheDebugger.vue'
 
 // Tab management
-const activeTab = ref('overview')
+const activeTab = ref('overview') // Changed default to overview to show the line chart
 
 // Use Pinia stores
 const dashboardStore = useDashboardStore()

@@ -137,10 +137,7 @@ const toggleDebugger = () => {
 }
 
 const updateCacheInfo = () => {
-  cacheInfo.value = {
-    ...getCacheInfo(),
-    leadsRatio: leadsRatioCacheManager.getCacheInfo()
-  }
+  cacheInfo.value = getCacheInfo()
 }
 
 const formatCacheName = (key) => {

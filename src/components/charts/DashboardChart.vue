@@ -43,7 +43,6 @@ const renderChart = () => {
   
   // Additional safety check for canvas element
   if (!chartRef.value.getContext) {
-    console.warn('Canvas ref not ready yet')
     return
   }
   
@@ -62,16 +61,36 @@ const renderChart = () => {
   
   const dates = Object.keys(props.chartData).sort()
   
-  // Format dates for Jakarta timezone display - follow utils.js approach
+  // Format dates for Jakarta timezone display - safer approach
   const formattedDates = dates.map(dateStr => {
-    // Handle YYYY-MM-DD format properly to avoid timezone issues
-    const [year, month, day] = dateStr.split('-')
-    const date = new Date(year, month - 1, day) // month is 0-indexed
-    return new Intl.DateTimeFormat('id-ID', {
-      timeZone: 'Asia/Jakarta',
-      month: 'short',
-      day: 'numeric'
-    }).format(date)
+    try {
+      // Handle YYYY-MM-DD format properly to avoid timezone issues
+      const [year, month, day] = dateStr.split('-')
+      
+      // Validate date components
+      if (!year || !month || !day || isNaN(year) || isNaN(month) || isNaN(day)) {
+        console.warn('Invalid date format:', dateStr)
+        return dateStr // Return original string if invalid
+      }
+      
+      // Create date using UTC to avoid timezone issues
+      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)))
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date created:', dateStr)
+        return dateStr // Return original string if invalid
+      }
+      
+      return new Intl.DateTimeFormat('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        month: 'short',
+        day: 'numeric'
+      }).format(date)
+    } catch (error) {
+      console.warn('Error formatting date:', dateStr, error)
+      return dateStr // Return original string on error
+    }
   })
   
   const spendData = dates.map(date => props.chartData[date].spend)

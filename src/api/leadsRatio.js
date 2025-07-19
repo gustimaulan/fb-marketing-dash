@@ -20,7 +20,6 @@ const cacheUtils = {
         timestamp: Date.now()
       }
       localStorage.setItem(key, JSON.stringify(cacheData))
-      console.log(`Leads ratio data cached with key: ${key}`)
     } catch (error) {
       console.warn('Failed to cache leads ratio data:', error)
     }
@@ -33,12 +32,9 @@ const cacheUtils = {
 
       const { data, timestamp } = JSON.parse(cached)
       if (Date.now() - timestamp > CACHE_DURATION) {
-        console.log('Leads ratio cache expired, removing:', key)
         localStorage.removeItem(key)
         return null
       }
-
-      console.log('Using cached leads ratio data:', key)
       return data
     } catch (error) {
       console.warn('Failed to read leads ratio cache:', error)
@@ -49,7 +45,6 @@ const cacheUtils = {
   clearCache: (key) => {
     try {
       localStorage.removeItem(key)
-      console.log('Leads ratio cache cleared:', key)
     } catch (error) {
       console.warn('Failed to clear leads ratio cache:', error)
     }
@@ -61,23 +56,29 @@ export const leadsRatioCacheManager = {
   getCacheInfo: () => {
     const cacheInfo = {}
     
-    // Check each storage key
-    Object.entries(STORAGE_KEYS).forEach(([key, storageKey]) => {
-      const cached = localStorage.getItem(storageKey)
-      if (cached) {
-        try {
-          const { timestamp } = JSON.parse(cached)
-          const age = Date.now() - timestamp
-          const isExpired = age > CACHE_DURATION
-          
-          cacheInfo[key] = {
-            age,
-            isExpired,
-            timestamp,
-            size: cached.length
+    // Check all localStorage keys that match our pattern
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(STORAGE_KEYS.LEADS_RATIO_DATA)) {
+        const cached = localStorage.getItem(key)
+        if (cached) {
+          try {
+            const { timestamp } = JSON.parse(cached)
+            const age = Date.now() - timestamp
+            const isExpired = age > CACHE_DURATION
+            
+            // Extract date range from key (e.g., "leads_ratio_data_2025-07-01_2025-07-19")
+            const dateRange = key.replace(STORAGE_KEYS.LEADS_RATIO_DATA + '_', '')
+            
+            cacheInfo[dateRange] = {
+              age,
+              isExpired,
+              timestamp,
+              size: cached.length,
+              recordCount: 1 // Leads ratio has one record per date range
+            }
+          } catch (error) {
+            cacheInfo[key] = { error: 'Invalid cache data' }
           }
-        } catch (error) {
-          cacheInfo[key] = { error: 'Invalid cache data' }
         }
       }
     })
@@ -86,10 +87,27 @@ export const leadsRatioCacheManager = {
   },
 
   clearAll: () => {
-    Object.values(STORAGE_KEYS).forEach(key => {
-      cacheUtils.clearCache(key)
+    // Clear all date-specific cache keys
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(STORAGE_KEYS.LEADS_RATIO_DATA)) {
+        cacheUtils.clearCache(key)
+      }
     })
     requestCache.clear()
+  },
+
+  // Force refresh data for specific date range
+  refresh: async (dateFrom, dateTo) => {
+    // Clear specific cache
+    const cacheKey = `${STORAGE_KEYS.LEADS_RATIO_DATA}_${dateFrom}_${dateTo}`
+    cacheUtils.clearCache(cacheKey)
+    const requestKey = `${dateFrom}_${dateTo}`
+    if (requestCache.has(requestKey)) {
+      requestCache.delete(requestKey)
+    }
+    
+    // Fetch fresh data
+    return await fetchLeadsRatio(dateFrom, dateTo)
   },
 
   // Add debug helper function
@@ -112,7 +130,6 @@ export const fetchLeadsRatio = async (startDate, endDate) => {
   // Check in-memory cache for ongoing requests
   const requestKey = `${startDate}_${endDate}`
   if (requestCache.has(requestKey)) {
-    console.log('Using in-memory cache for leads ratio request')
     return requestCache.get(requestKey)
   }
 
@@ -144,7 +161,6 @@ export const fetchLeadsRatio = async (startDate, endDate) => {
       requestCache.delete(requestKey)
     }, 30000)
     
-    console.log('Processed leads ratio data:', processedData)
     return processedData
     
   } catch (error) {
@@ -245,8 +261,17 @@ window.debugLeads = async (startDate = '2025-07-18', endDate = '2025-07-18') => 
   try {
     // Make fresh API call
     const data = await fetchLeadsRatio(startDate, endDate)
+    console.log('Leads ratio data:', data)
+    console.log('Cache info:', leadsRatioCacheManager.getCacheInfo())
     return data
   } catch (error) {
+    console.error('Leads ratio error:', error)
     return { error: error.message }
   }
+}
+
+// Test cache info
+window.testLeadsCache = () => {
+  console.log('Current cache info:', leadsRatioCacheManager.getCacheInfo())
+  console.log('All localStorage keys:', Object.keys(localStorage).filter(k => k.includes('leads')))
 } 
