@@ -65,19 +65,31 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   // Enhanced TanStack Query with daily data update schedule
   const dashboardQuery = useQuery({
-    queryKey: computed(() => ['dashboard-data', startDate.value, endDate.value]),
+    queryKey: computed(() => {
+      const key = ['dashboard-data', startDate.value, endDate.value]
+      console.log('🔑 Query Key Generated:', key)
+      return key
+    }),
     queryFn: async () => {
       const queryId = Date.now()
-      console.log(`🔄 [${queryId}] Dashboard query function called with dates:`, { 
+      console.log(`🔄 [${queryId}] NEW API CALL - Dashboard query function called with dates:`, { 
         startDate: startDate.value, 
-        endDate: endDate.value 
+        endDate: endDate.value,
+        expectedURL: `https://workflows.cekat.ai/webhook/meta-ads-data?date-from=${startDate.value}&date-to=${endDate.value}`
       })
       try {
         const data = await fetchDashboardData({
           startDate: startDate.value,
           endDate: endDate.value
         })
-        console.log(`✅ [${queryId}] Dashboard data fetched successfully:`, data.length, 'records')
+        console.log(`✅ [${queryId}] Dashboard data fetched successfully:`, {
+          recordCount: data.length,
+          dateRange: `${startDate.value} to ${endDate.value}`,
+          firstRecord: data[0] ? { 
+            campaign: data[0].campaign_name, 
+            date: data[0].date_start 
+          } : 'no data'
+        })
         return data
       } catch (error) {
         console.log('Dashboard query error:', error)
@@ -659,7 +671,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
         const firstDayOfMonth = new Date(jakartaToday.getFullYear(), jakartaToday.getMonth(), 1)
         startDate.value = formatDateString(firstDayOfMonth)
         endDate.value = formatDateString(jakartaToday)
-        console.log('This month range set:', startDate.value, 'to', endDate.value)
+        console.log('📅 THIS MONTH calculation:', {
+          jakartaToday: jakartaToday.toISOString(),
+          firstDayCalculated: firstDayOfMonth.toISOString(),
+          startDateSet: startDate.value,
+          endDateSet: endDate.value,
+          expectedRecords: 'Should be 513 records for July 2025'
+        })
         break
       case 'lastMonth':
       case 'lastmonth':
@@ -769,19 +787,27 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   const initializeDashboard = () => {
+    console.log('🚀 Initializing Dashboard...')
+    
+    // Clear any stale caches first
+    clearAllCaches()
+    
     // Load user preferences first
     loadPreferences()
     
     // Always sync dates with the current dateRange (whether from preferences or default)
     const currentRange = dateRange.value || 'last7days'
+    console.log('📅 Setting initial date range:', currentRange)
     setDateRange(currentRange)
     
     // Update selected products when data changes
     updateSelectedProducts()
     
-    // Preload data in background
-    cacheManager.preload()
-    salesOrderCacheManager.preload()
+    console.log('✅ Dashboard initialized with:', {
+      dateRange: dateRange.value,
+      startDate: startDate.value,
+      endDate: endDate.value
+    })
   }
 
   const updateSelectedProducts = () => {
@@ -824,9 +850,24 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
   
   const clearAllCaches = () => {
-    console.log('Clearing all caches (FB ads + sales orders)...')
+    console.log('🧹 Clearing ALL caches completely...')
+    
+    // Clear Pinia cache managers
     cacheManager.clearAll()
     salesOrderCacheManager.clearAll()
+    
+    // Clear ALL localStorage dashboard entries
+    Object.keys(localStorage).forEach(key => {
+      if (key.includes('dashboard') || key.includes('cache') || key.includes('data')) {
+        console.log('🗑️ Removing localStorage key:', key)
+        localStorage.removeItem(key)
+      }
+    })
+    
+    // Force TanStack Query to invalidate all dashboard queries
+    dashboardQuery.invalidateQueries?.()
+    
+    console.log('✅ All caches cleared completely')
   }
   
   const refreshData = () => {
@@ -846,6 +887,32 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  // Debug function for troubleshooting (available in browser console)
+  const debugDashboard = () => {
+    const debug = {
+      currentDates: {
+        startDate: startDate.value,
+        endDate: endDate.value,
+        dateRange: dateRange.value
+      },
+      queryState: {
+        isLoading: dashboardQuery.isLoading.value,
+        error: dashboardQuery.error.value?.message,
+        dataLength: allData.value?.length || 0
+      },
+      expectedAPI_URL: `https://workflows.cekat.ai/webhook/meta-ads-data?date-from=${startDate.value}&date-to=${endDate.value}`,
+      localStorage: Object.keys(localStorage).filter(k => k.includes('dashboard')),
+      queryKey: ['dashboard-data', startDate.value, endDate.value]
+    }
+    console.table(debug)
+    return debug
+  }
+  
+  // Make debug function globally available
+  if (typeof window !== 'undefined') {
+    window.debugDashboard = debugDashboard
+  }
+
   // Watch for data changes to update products
   watch([allData, productOptions], updateSelectedProducts, { immediate: true })
   
@@ -854,6 +921,17 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (!isLoading && allData.value.length > 0) {
       console.log('Data loading completed, updating selected products')
       updateSelectedProducts()
+    }
+  })
+  
+  // Watch for date changes and log them
+  watch([startDate, endDate], ([newStart, newEnd], [oldStart, oldEnd]) => {
+    if (newStart !== oldStart || newEnd !== oldEnd) {
+      console.log('📅 DATE CHANGE DETECTED:', {
+        from: `${oldStart} to ${oldEnd}`,
+        to: `${newStart} to ${newEnd}`,
+        shouldTriggerNewQuery: true
+      })
     }
   })
 
