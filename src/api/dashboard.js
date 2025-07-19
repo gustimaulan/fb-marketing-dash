@@ -79,16 +79,20 @@ export const metaAdsCacheManager = {
     const cacheInfo = {}
     
     // Get all localStorage keys that start with 'meta_ads_'
+    console.log('🔍 META ADS DEBUG: Checking localStorage for meta_ads_ keys...')
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
       if (key && key.startsWith('meta_ads_')) {
+        console.log(`📦 META ADS DEBUG: Found cache key: ${key}`)
         const info = cacheUtils.getCacheInfo(key)
+        console.log(`📊 META ADS DEBUG: Cache info for ${key}:`, info)
         if (info) {
           cacheInfo[key] = info
         }
       }
     }
     
+    console.log('✅ META ADS DEBUG: Final cache info:', cacheInfo)
     return cacheInfo
   },
 
@@ -185,15 +189,17 @@ const cacheUtils = {
       const cached = localStorage.getItem(key)
       if (!cached) return null
 
-      const { timestamp } = JSON.parse(cached)
+      const { data, timestamp } = JSON.parse(cached)
       const age = Date.now() - timestamp
       const remaining = CACHE_DURATION - age
 
       return {
         exists: true,
+        size: cached.length,  // Add size field for cache debugger
         age,
         remaining: Math.max(0, remaining),
-        expired: remaining <= 0
+        expired: remaining <= 0,
+        recordCount: Array.isArray(data) ? data.length : 0  // Add record count
       }
     } catch (error) {
       return null
@@ -282,6 +288,12 @@ const fetchMetaAdsWithCache = async (dateFrom, dateTo, options = {}) => {
     // Cache the successful response
     requestCache.set(cacheKey, { data, timestamp: Date.now() })
     cacheUtils.setCache(cacheKey, data)
+    
+    console.log('💾 META ADS DEBUG: Data cached successfully:', {
+      cacheKey,
+      recordCount: data.length,
+      cacheEntryExists: localStorage.getItem(cacheKey) ? 'YES' : 'NO'
+    })
     
     return data
   } catch (error) {

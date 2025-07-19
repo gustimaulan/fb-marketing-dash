@@ -118,7 +118,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useDashboardStore } from '../../stores/dashboard.js'
-import { cacheManager } from '../../api/dashboard.js'
+import { metaAdsCacheManager } from '../../api/dashboard.js'
 import { salesOrderCacheManager } from '../../api/salesOrders.js'
 import { leadsRatioCacheManager } from '../../api/leadsRatio.js'
 
