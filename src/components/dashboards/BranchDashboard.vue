@@ -340,15 +340,15 @@ const hasDataQualityIssues = computed(() => {
       branch.metrics.sales_order.orders
     )
     
-    // Flag extreme ratios or invalid data
-    return revenueAnalysis.ratio > 50 || revenueAnalysis.ratio < 0.02 ||
-           orderAnalysis.ratio > 50 || orderAnalysis.ratio < 0.02 ||
+    // Flag extreme ratios or invalid data (using more reasonable thresholds)
+    return revenueAnalysis.ratio > 10 || revenueAnalysis.ratio < 0.1 ||
+           orderAnalysis.ratio > 10 || orderAnalysis.ratio < 0.1 ||
            revenueAnalysis.direction === 'invalid-data' ||
            orderAnalysis.direction === 'invalid-data'
   })
 })
 
-// Tracking accuracy and gap analysis functions - COMPLETELY REWRITTEN
+// Tracking accuracy and gap analysis functions - FIXED DOUBLE PERCENTAGE ISSUE
 const getAccuracyPercentage = (fbValue, salesOrderValue) => {
   // Convert to numbers and handle all edge cases
   const fbVal = parseFloat(fbValue) || 0
@@ -365,23 +365,26 @@ const getAccuracyPercentage = (fbValue, salesOrderValue) => {
   const fbAbs = Math.abs(fbVal)
   const salesAbs = Math.abs(salesVal)
   
-  // Calculate similarity percentage (0-100%)
+  // Calculate similarity as decimal (0-1) - NOT percentage!
   const smaller = Math.min(fbAbs, salesAbs)
   const larger = Math.max(fbAbs, salesAbs)
   
   // Prevent division by zero
   if (larger === 0) return 0
   
-  const similarity = (smaller / larger) * 100
+  // Return decimal value (0-1) because formatPercentage will multiply by 100
+  const similarity = smaller / larger
   
   console.log('📊 Accuracy Calculation:', {
-    fbAbs, salesAbs, smaller, larger, similarity,
+    fbAbs, salesAbs, smaller, larger, 
+    similarityDecimal: similarity,
+    similarityPercent: similarity * 100,
     ratio: salesAbs / fbAbs
   })
   
-  // Always return a value between 0 and 100
-  const result = Math.max(0, Math.min(100, similarity))
-  console.log('✅ Final Accuracy:', result)
+  // Return decimal value between 0 and 1 (formatPercentage will handle the *100)
+  const result = Math.max(0, Math.min(1, similarity))
+  console.log('✅ Final Accuracy (decimal):', result, 'Will display as:', (result * 100).toFixed(1) + '%')
   
   return result
 }
@@ -566,6 +569,25 @@ const debugBranchData = () => {
 // Expose debug function globally for browser console access
 if (typeof window !== 'undefined') {
   window.debugBranchAccuracy = debugBranchData
+  
+  // Quick test function to verify percentage fix
+  window.testAccuracyFix = () => {
+    console.log('🧪 Testing Accuracy Fix:')
+    
+    // Test cases
+    const testCases = [
+      { fb: 100, sales: 6000, expected: '1.7%' },
+      { fb: 1000, sales: 3000, expected: '33.3%' },
+      { fb: 2000, sales: 2000, expected: '100.0%' },
+      { fb: 5000, sales: 1000, expected: '20.0%' }
+    ]
+    
+    testCases.forEach(test => {
+      const accuracy = getAccuracyPercentage(test.fb, test.sales)
+      const formatted = formatPercentage(accuracy)
+      console.log(`FB: ${test.fb}, Sales: ${test.sales} → Accuracy: ${accuracy} → Formatted: ${formatted} (Expected: ${test.expected})`)
+    })
+  }
 }
 
 </script> 
