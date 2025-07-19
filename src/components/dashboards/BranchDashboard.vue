@@ -71,6 +71,24 @@
         </div>
       </div>
 
+      <!-- Data Quality Warning (if extreme values detected) -->
+      <div v-if="hasDataQualityIssues" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-yellow-800">⚠️ Data Quality Alert</h3>
+            <p class="mt-1 text-sm text-yellow-700">
+              Extreme accuracy values detected. This may indicate data processing issues or significant tracking discrepancies. 
+              Check browser console for detailed analysis (type <code class="bg-yellow-100 px-1 rounded">debugBranchAccuracy()</code>).
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Branch Performance Comparison -->
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
         <div v-for="branchData in branchPerformanceData" :key="branchData.branchName" 
@@ -164,12 +182,17 @@
                 <div class="text-xs text-gray-500">
                   FB: {{ formatCurrency(branchData.metrics.fb_reported.revenue) }} vs 
                   Actual: {{ formatCurrency(branchData.metrics.sales_order.revenue) }}
-                  <span v-if="getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction === 'fb-under-reporting'" 
-                        class="text-orange-600 font-medium ml-2">📉 FB Under-reporting</span>
-                  <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction === 'fb-over-reporting'" 
-                        class="text-red-600 font-medium ml-2">📈 FB Over-reporting</span>
-                  <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction === 'accurate'" 
-                        class="text-green-600 font-medium ml-2">✅ Accurate</span>
+                  <br>
+                  <span class="mt-1 inline-block">
+                    Ratio: {{ formatNumber(getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).ratio, 2) }}x
+                    <span v-if="getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction === 'fb-under-reporting'" 
+                          class="text-orange-600 font-medium ml-2">📉 FB Under-reporting</span>
+                    <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction === 'fb-over-reporting'" 
+                          class="text-red-600 font-medium ml-2">📈 FB Over-reporting</span>
+                    <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction === 'accurate'" 
+                          class="text-green-600 font-medium ml-2">✅ Accurate</span>
+                    <span v-else class="text-gray-500 font-medium ml-2">❓ {{ getAccuracyAnalysis(branchData.metrics.fb_reported.revenue, branchData.metrics.sales_order.revenue).direction }}</span>
+                  </span>
                 </div>
               </div>
 
@@ -184,12 +207,17 @@
                 <div class="text-xs text-gray-500">
                   FB: {{ formatNumber(branchData.metrics.fb_reported.orders) }} vs 
                   Actual: {{ formatNumber(branchData.metrics.sales_order.orders) }}
-                  <span v-if="getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction === 'fb-under-reporting'" 
-                        class="text-orange-600 font-medium ml-2">📉 FB Under-reporting</span>
-                  <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction === 'fb-over-reporting'" 
-                        class="text-red-600 font-medium ml-2">📈 FB Over-reporting</span>
-                  <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction === 'accurate'" 
-                        class="text-green-600 font-medium ml-2">✅ Accurate</span>
+                  <br>
+                  <span class="mt-1 inline-block">
+                    Ratio: {{ formatNumber(getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).ratio, 2) }}x
+                    <span v-if="getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction === 'fb-under-reporting'" 
+                          class="text-orange-600 font-medium ml-2">📉 FB Under-reporting</span>
+                    <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction === 'fb-over-reporting'" 
+                          class="text-red-600 font-medium ml-2">📈 FB Over-reporting</span>
+                    <span v-else-if="getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction === 'accurate'" 
+                          class="text-green-600 font-medium ml-2">✅ Accurate</span>
+                    <span v-else class="text-gray-500 font-medium ml-2">❓ {{ getAccuracyAnalysis(branchData.metrics.fb_reported.orders, branchData.metrics.sales_order.orders).direction }}</span>
+                  </span>
                 </div>
               </div>
             </div>
@@ -298,6 +326,28 @@ const averageCostPerOrder = computed(() => {
   return totalOrders > 0 ? totalBudget.value / totalOrders : 0
 })
 
+// Detect data quality issues
+const hasDataQualityIssues = computed(() => {
+  if (!props.branchPerformanceData) return false
+  
+  return props.branchPerformanceData.some(branch => {
+    const revenueAnalysis = getAccuracyAnalysis(
+      branch.metrics.fb_reported.revenue,
+      branch.metrics.sales_order.revenue
+    )
+    const orderAnalysis = getAccuracyAnalysis(
+      branch.metrics.fb_reported.orders,
+      branch.metrics.sales_order.orders
+    )
+    
+    // Flag extreme ratios or invalid data
+    return revenueAnalysis.ratio > 50 || revenueAnalysis.ratio < 0.02 ||
+           orderAnalysis.ratio > 50 || orderAnalysis.ratio < 0.02 ||
+           revenueAnalysis.direction === 'invalid-data' ||
+           orderAnalysis.direction === 'invalid-data'
+  })
+})
+
 // Tracking accuracy and gap analysis functions
 const getAccuracyPercentage = (fbValue, salesOrderValue) => {
   if (!fbValue || !salesOrderValue) return 0
@@ -324,10 +374,22 @@ const getAccuracyColor = (fbValue, salesOrderValue) => {
   return 'text-red-600'
 }
 
-// Enhanced accuracy analysis with direction indicator
+// Enhanced accuracy analysis with direction indicator and debug logging
 const getAccuracyAnalysis = (fbValue, salesOrderValue) => {
+  // Debug logging to identify data issues
+  console.log('🔍 Accuracy Analysis Debug:', {
+    fbValue: { raw: fbValue, type: typeof fbValue },
+    salesOrderValue: { raw: salesOrderValue, type: typeof salesOrderValue }
+  })
+  
   const fbVal = Math.abs(parseFloat(fbValue) || 0)
   const salesVal = Math.abs(parseFloat(salesOrderValue) || 0)
+  
+  // Additional validation
+  if (isNaN(fbVal) || isNaN(salesVal)) {
+    console.warn('⚠️ Invalid numeric values detected:', { fbVal, salesVal })
+    return { accuracy: 0, direction: 'invalid-data', ratio: 0 }
+  }
   
   if (fbVal === 0 && salesVal === 0) return { accuracy: 0, direction: 'no-data', ratio: 0 }
   if (fbVal === 0) return { accuracy: 0, direction: 'fb-missing', ratio: 0 }
@@ -336,18 +398,30 @@ const getAccuracyAnalysis = (fbValue, salesOrderValue) => {
   const accuracy = Math.min(fbVal, salesVal) / Math.max(fbVal, salesVal) * 100
   const ratio = salesVal / fbVal
   
+  // Debug extreme ratios
+  if (ratio > 10 || ratio < 0.1) {
+    console.warn('🚨 Extreme ratio detected:', {
+      fbVal, salesVal, ratio,
+      fbFormatted: formatCurrency(fbVal),
+      salesFormatted: formatCurrency(salesVal)
+    })
+  }
+  
   let direction
   if (ratio > 1.2) direction = 'fb-under-reporting'      // FB reports less than actual
   else if (ratio < 0.8) direction = 'fb-over-reporting'  // FB reports more than actual  
   else direction = 'accurate'                            // Close match
   
-  return { 
+  const result = { 
     accuracy: Math.min(accuracy, 100), 
     direction, 
     ratio,
     fbValue: fbVal,
     salesValue: salesVal
   }
+  
+  console.log('📊 Accuracy Result:', result)
+  return result
 }
 
 const getRevenueGap = (fbRevenue, salesOrderRevenue) => {
@@ -426,5 +500,40 @@ const getBudgetRecommendation = (branchData) => {
   }
 }
 
+// Debug function to analyze branch data quality
+const debugBranchData = () => {
+  if (!props.branchPerformanceData) {
+    console.log('❌ No branch performance data available')
+    return
+  }
+  
+  console.log('🏢 Branch Data Debug Analysis:')
+  console.log('Raw branch data:', props.branchPerformanceData)
+  
+  props.branchPerformanceData.forEach((branch, index) => {
+    console.log(`\n📍 Branch ${index + 1}: ${branch.branchName}`)
+    console.log('Metrics structure:', branch.metrics)
+    console.log('FB Reported:', branch.metrics.fb_reported)
+    console.log('Sales Order:', branch.metrics.sales_order)
+    
+    // Calculate accuracy for debugging
+    const revenueAccuracy = getAccuracyAnalysis(
+      branch.metrics.fb_reported.revenue,
+      branch.metrics.sales_order.revenue
+    )
+    console.log('Revenue accuracy analysis:', revenueAccuracy)
+    
+    const orderAccuracy = getAccuracyAnalysis(
+      branch.metrics.fb_reported.orders,
+      branch.metrics.sales_order.orders
+    )
+    console.log('Order accuracy analysis:', orderAccuracy)
+  })
+}
+
+// Expose debug function globally for browser console access
+if (typeof window !== 'undefined') {
+  window.debugBranchAccuracy = debugBranchData
+}
 
 </script> 
