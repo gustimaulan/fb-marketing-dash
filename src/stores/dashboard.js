@@ -175,15 +175,20 @@ export const useDashboardStore = defineStore('dashboard', () => {
   // Raw data from query
   const allData = computed(() => {
     const data = dashboardQuery.data.value || []
-    console.log('allData computed:', { 
-      length: data.length, 
+    
+    // Get unique dates in the data for debugging
+    const uniqueDates = [...new Set(data.map(row => row.date_start?.split('T')[0]).filter(Boolean))].sort()
+    
+    console.log('allData computed (direct from API):', { 
+      totalRecords: data.length, 
       loading: dashboardQuery.isLoading.value,
       error: dashboardQuery.error.value,
       usingSampleData: useSampleDataFallback.value,
+      dateRange: `${startDate.value} to ${endDate.value}`,
+      uniqueDatesInData: uniqueDates,
+      dateCount: uniqueDates.length,
       firstRecord: data[0] ? {
         campaign: data[0].campaign_name,
-        ad: data[0].ad_name,
-        spend: data[0].spend,
         date: data[0].date_start
       } : 'no records'
     })
@@ -219,18 +224,19 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return calculateBranchMetrics(salesOrderData.value, metrics.value, leadsRatioData.value)
   })
   
-  // Date filtered data with memoization
+  // Data is already filtered by the API call, no need to filter again
   const data = computed(() => {
-    const filtered = filterDataByDateRange(allData.value, startDate.value, endDate.value)
-    console.log('data computed (after date filtering):', { 
-      originalLength: allData.value.length, 
-      filteredLength: filtered.length,
+    // Since we pass date ranges to the API, allData already contains the correct date range
+    const apiData = allData.value || []
+    console.log('data computed (API already filtered):', { 
+      apiDataLength: apiData.length,
       startDate: startDate.value,
       endDate: endDate.value,
-      firstRecordDate: allData.value[0]?.date_start || 'no records',
-      dateFilterWorking: allData.value.length > 0 && filtered.length > 0
+      firstRecordDate: apiData[0]?.date_start || 'no records',
+      lastRecordDate: apiData[apiData.length - 1]?.date_start || 'no records',
+      dateRangeSpan: apiData.length > 0 ? `${apiData[0]?.date_start} to ${apiData[apiData.length - 1]?.date_start}` : 'no data'
     })
-    return filtered
+    return apiData
   })
 
   // Loading and error states from query
