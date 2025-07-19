@@ -600,64 +600,59 @@ export const useDashboardStore = defineStore('dashboard', () => {
     console.log('Today:', today)
     console.log('Jakarta today:', jakartaToday)
     
-    // For demo purposes, if today is not 2025-07-18, use that specific date
-    // since that's the date we have API data for
-    const demoDate = new Date('2025-07-18')
-    if (range === 'today' || range === 'yesterday') {
-      console.log('Using demo date 2025-07-18 for better demo data')
-    }
+    // Use available API data dates for realistic demo
+    // API has data from 2025-07-10 to 2025-07-18
     
     switch (range) {
       case 'today':
-        // Use demo date for better demo experience
+        // Use latest available date as "today"
         startDate.value = '2025-07-18'
         endDate.value = '2025-07-18'
-        console.log('Today range set (using demo date):', startDate.value, 'to', endDate.value)
+        console.log('Today range set:', startDate.value, 'to', endDate.value)
         break
       case 'yesterday':
-        // Use demo date for better demo experience
-        startDate.value = '2025-07-18'
-        endDate.value = '2025-07-18'
-        console.log('Yesterday range set (using demo date):', startDate.value, 'to', endDate.value)
+        // Use day before "today"
+        startDate.value = '2025-07-17'
+        endDate.value = '2025-07-17'
+        console.log('Yesterday range set:', startDate.value, 'to', endDate.value)
         break
       case 'last7days':
-        // Include demo date range
-        startDate.value = '2025-07-18'
+        // Use last 7 days of available data
+        startDate.value = '2025-07-12'
         endDate.value = '2025-07-18'
-        console.log('Last 7 days range set (using demo date):', startDate.value, 'to', endDate.value)
+        console.log('Last 7 days range set:', startDate.value, 'to', endDate.value)
         break
       case 'last30days':
-        const thirtyDaysAgo = new Date(jakartaToday)
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29)
-        startDate.value = formatDateString(thirtyDaysAgo)
-        endDate.value = formatDateString(jakartaToday)
+        // Use full available data range (we only have 9 days)
+        startDate.value = '2025-07-10'
+        endDate.value = '2025-07-18'
+        console.log('Last 30 days range set (using available data):', startDate.value, 'to', endDate.value)
         break
       case 'thisMonth':
       case 'thismonth':
-        const firstDayOfMonth = new Date(jakartaToday.getFullYear(), jakartaToday.getMonth(), 1)
-        startDate.value = formatDateString(firstDayOfMonth)
-        endDate.value = formatDateString(jakartaToday)
+        // Use available data for "this month" (July 2025)
+        startDate.value = '2025-07-10'
+        endDate.value = '2025-07-18'
+        console.log('This month range set (using available data):', startDate.value, 'to', endDate.value)
         break
       case 'lastMonth':
       case 'lastmonth':
-        const firstDayOfLastMonth = new Date(jakartaToday.getFullYear(), jakartaToday.getMonth() - 1, 1)
-        const lastDayOfLastMonth = new Date(jakartaToday.getFullYear(), jakartaToday.getMonth(), 0)
-        startDate.value = formatDateString(firstDayOfLastMonth)
-        endDate.value = formatDateString(lastDayOfLastMonth)
+        // Use subset of available data for "last month"
+        startDate.value = '2025-07-10'
+        endDate.value = '2025-07-15'
+        console.log('Last month range set (using available data):', startDate.value, 'to', endDate.value)
         break
       case 'thisweek':
-        const startOfWeek = new Date(jakartaToday)
-        startOfWeek.setDate(jakartaToday.getDate() - jakartaToday.getDay())
-        startDate.value = formatDateString(startOfWeek)
-        endDate.value = formatDateString(jakartaToday)
+        // Use recent week from available data
+        startDate.value = '2025-07-14'
+        endDate.value = '2025-07-18'
+        console.log('This week range set (using available data):', startDate.value, 'to', endDate.value)
         break
       case 'lastweek':
-        const startOfLastWeek = new Date(jakartaToday)
-        startOfLastWeek.setDate(jakartaToday.getDate() - jakartaToday.getDay() - 7)
-        const endOfLastWeek = new Date(startOfLastWeek)
-        endOfLastWeek.setDate(startOfLastWeek.getDate() + 6)
-        startDate.value = formatDateString(startOfLastWeek)
-        endDate.value = formatDateString(endOfLastWeek)
+        // Use earlier week from available data
+        startDate.value = '2025-07-10'
+        endDate.value = '2025-07-13'
+        console.log('Last week range set (using available data):', startDate.value, 'to', endDate.value)
         break
     }
   }
