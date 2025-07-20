@@ -163,7 +163,7 @@
                <span class="text-orange-600">💰 Real Purchases: {{ formatNumber(attributionMetrics.fbAttributedOrders || 0) }}</span> • 
                <span v-if="leadsRatioLoading" class="text-purple-600">Conversion: Loading...</span>
                <span v-else-if="leadsRatioError" class="text-red-600">Conversion: Error</span>
-               <span v-else-if="leadsRatioData && leadsRatioData.totalLeads > 0" class="text-green-600">Conversion: {{ formatPercentage((attributionMetrics.fbAttributedOrders / leadsRatioData.totalLeads) * 100) }}</span>
+               <span v-else-if="leadsRatioData && leadsRatioData.totalLeads > 0" class="text-green-600">Conversion: {{ formatPercentage((attributionMetrics.fbAttributedOrders / leadsRatioData.totalLeads)) }}</span>
                <span v-else class="text-gray-400">Conversion: No data</span>
              </div>
           </div>
@@ -257,7 +257,7 @@
                 <span v-if="leadsRatioLoading" class="font-semibold text-purple-600">Loading...</span>
                 <span v-else-if="leadsRatioError" class="font-semibold text-red-600">Error</span>
                 <span v-else-if="leadsRatioData && leadsRatioData.totalLeads > 0" class="font-semibold text-green-600">
-                  {{ formatPercentage((attributionMetrics.fbAttributedOrders / leadsRatioData.totalLeads) * 100) }}
+                  {{ formatPercentage((attributionMetrics.fbAttributedOrders / leadsRatioData.totalLeads)) }}
                 </span>
                 <span v-else class="font-semibold text-gray-400">No data</span>
               </div>

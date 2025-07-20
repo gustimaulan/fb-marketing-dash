@@ -74,7 +74,7 @@
             <div class="grid grid-cols-2 gap-2 text-xs">
               <div class="flex justify-between">
                 <span>Lead to Purchase:</span>
-                <span class="font-medium">{{ formatPercentage(branchData.actualLeads > 0 ? (branchData.actualPurchases / branchData.actualLeads) * 100 : 0) }}</span>
+                <span class="font-medium">{{ formatPercentage(branchData.actualLeads > 0 ? (branchData.actualPurchases / branchData.actualLeads) : 0) }}</span>
               </div>
               <div class="flex justify-between">
                 <span>True CPA:</span>
@@ -105,7 +105,7 @@
               </div>
               <div class="flex justify-between">
                 <span>CTR:</span>
-                <span class="font-medium">{{ formatPercentage(branchData.metrics.ctr) }}</span>
+                <span class="font-medium">{{ formatPercentage(branchData.metrics.ctr / 100) }}</span>
               </div>
               <div class="flex justify-between">
                 <span>CPP:</span>
@@ -149,7 +149,7 @@
         </span>
       </div>
       <div v-if="leadsRatioData.totalPurchases && leadsRatioData.totalLeads" class="text-center mt-2 text-xs text-gray-600">
-        Overall Lead to Purchase Rate: {{ formatPercentage((leadsRatioData.totalPurchases / leadsRatioData.totalLeads) * 100) }}
+                        Overall Lead to Purchase Rate: {{ formatPercentage((leadsRatioData.totalPurchases / leadsRatioData.totalLeads)) }}
       </div>
     </div>
   </div>

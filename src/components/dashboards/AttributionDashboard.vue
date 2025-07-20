@@ -119,7 +119,7 @@
               </div>
               <div class="text-right">
                 <div class="font-bold text-orange-900">
-                  {{ formatPercentage(totalSalesRevenue > 0 ? (attributionMetrics.fbAttributedRevenue / totalSalesRevenue) * 100 : 0) }}
+                  {{ formatPercentage(totalSalesRevenue > 0 ? (attributionMetrics.fbAttributedRevenue / totalSalesRevenue) : 0) }}
                 </div>
               </div>
             </div>

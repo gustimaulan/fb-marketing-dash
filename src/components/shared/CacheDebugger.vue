@@ -141,6 +141,15 @@ const updateCacheInfo = () => {
 }
 
 const formatCacheName = (key) => {
+  // Convert "Meta Ads 2025-07-01 2025-07-20" to "Jul 1 - Jul 20"
+  const parts = key.replace('Meta Ads ', '').split(' ')
+  if (parts.length === 2) {
+    const formatDate = (dateStr) => {
+      const date = new Date(dateStr)
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+    return `${formatDate(parts[0])} - ${formatDate(parts[1])}`
+  }
   return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
