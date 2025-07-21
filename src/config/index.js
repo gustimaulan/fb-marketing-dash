@@ -2,7 +2,7 @@
 export const config = {
   // API Configuration
   api: {
-    odooBaseUrl: import.meta.env.VITE_ODOO_BASE_URL || 'https://api.odoo.pitcar.co.id',
+    odooBaseUrl: import.meta.env.VITE_ODOO_BASE_URL || 'https://fb-marketing-dash-api.gmaulan47.workers.dev',
     timeout: 30000,
   },
   

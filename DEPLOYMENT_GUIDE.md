@@ -24,20 +24,14 @@ wrangler login
 wrangler deploy
 ```
 
-### 2. Configure DNS
-
-Add a DNS record in your Cloudflare dashboard:
-- **Type**: CNAME
-- **Name**: `api.odoo`
-- **Target**: `fb-marketing-dash-api.your-subdomain.workers.dev`
-- **Proxy status**: Proxied (orange cloud)
-
-### 3. Update Environment Variables
+### 2. Update Environment Variables
 
 In your Cloudflare Pages deployment settings, add:
 ```
-VITE_ODOO_BASE_URL=https://api.odoo.pitcar.co.id
+VITE_ODOO_BASE_URL=https://fb-marketing-dash-api.gmaulan47.workers.dev
 ```
+
+**Note**: Since you don't have DNS access, we're using the direct worker URL instead of a custom domain.
 
 ### 4. Alternative: Direct Odoo Server Configuration
 
@@ -67,7 +61,7 @@ location /web/ {
 
 The application is configured to use:
 - **Development**: Direct connection to Odoo server
-- **Production**: Cloudflare Worker proxy at `https://api.odoo.pitcar.co.id`
+- **Production**: Cloudflare Worker proxy at `https://fb-marketing-dash-api.gmaulan47.workers.dev`
 
 ## Testing
 
