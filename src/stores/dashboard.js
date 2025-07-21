@@ -30,8 +30,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const currentSort = ref({ column: null, direction: 'asc' })
   const searchQuery = ref('')
   
-  // Date range state - initialize with last7days for better demo data
-  const dateRange = ref('last7days')
+  // Date range state - initialize with thismonth for better demo data
+  const dateRange = ref('thismonth')
   const startDate = ref('')
   const endDate = ref('')
   
