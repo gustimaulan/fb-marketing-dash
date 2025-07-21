@@ -180,7 +180,8 @@ const processLeadsRatioData = (rawData) => {
       total: parseInt(branch.total),
       percentage: parseFloat(branch.percentage),
       ratio: parseFloat(branch.percentage) / 100,
-      purchases: parseInt(branch.purchase) || 0
+      purchases: parseInt(branch.purchase) || 0,
+      lastCreatedAt: branch.last_created_at || null
     }
     return processed
   })
@@ -188,11 +189,22 @@ const processLeadsRatioData = (rawData) => {
   const totalLeads = branches.reduce((sum, branch) => sum + branch.total, 0)
   const totalPurchases = branches.reduce((sum, branch) => sum + branch.purchases, 0)
   
+  // Find the most recent last_created_at from all branches
+  const lastCreatedDates = branches
+    .map(branch => branch.lastCreatedAt)
+    .filter(date => date !== null)
+    .map(date => new Date(date))
+  
+  const mostRecentDate = lastCreatedDates.length > 0 
+    ? new Date(Math.max(...lastCreatedDates))
+    : new Date()
+  
   const result = {
     branches,
     totalLeads,
     totalPurchases,
-    lastUpdated: new Date().toISOString()
+    lastUpdated: mostRecentDate.toISOString(),
+    lastCreatedAt: mostRecentDate.toISOString()
   }
   
   return result

@@ -6,6 +6,7 @@
       <p class="mt-2 text-gray-600">
         Compare FB Reported data vs Sales Order data (actual) for accurate budget allocation decisions.
         <span class="text-orange-600 font-medium">📊 FB Reported</span> vs <span class="text-green-600 font-medium">✅ Sales Order (Actual)</span>
+        <span v-if="dateRangeText" class="text-xs text-gray-500 ml-2">({{ dateRangeText }})</span>
       </p>
     </div>
 
@@ -95,16 +96,23 @@
              class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <!-- Branch Header -->
           <div class="flex items-center justify-between mb-6">
-            <div>
-              <h4 class="text-xl font-bold text-gray-900">{{ branchData.branchName }}</h4>
-              <p class="text-sm text-gray-600">{{ branchData.percentage }}% of total ad spend allocation</p>
+            <div class="flex items-center space-x-4">
+              <div v-if="getBranchLogo(branchData.branchName)" class="flex-shrink-0">
+                <img :src="getBranchLogo(branchData.branchName)" 
+                     :alt="branchData.branchName + ' logo'"
+                     class="h-6 w-auto object-contain">
+              </div>
+              <div>
+                <h4 class="text-xl font-bold text-gray-900">{{ branchData.branchName }}</h4>
+                <p class="text-sm text-gray-600">{{ branchData.percentage }}% of total ad spend allocation</p>
+              </div>
             </div>
-            <div class="text-right">
+            <!-- <div class="text-right">
               <div class="px-3 py-1 rounded-full text-sm font-medium"
                    :class="branchData.metrics.roas > overallROAS ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
                 {{ branchData.metrics.roas > overallROAS ? 'Outperforming' : 'Underperforming' }}
               </div>
-            </div>
+            </div> -->
           </div>
 
           <!-- Key Financial Metrics -->
@@ -266,6 +274,9 @@
 <script setup>
 import { computed } from 'vue'
 import { useUtilsStore } from '../../stores/utils.js'
+import { useDashboardStore } from '../../stores/dashboard.js'
+import pitcarLogo from '../../assets/logos/pitcar-logo.png'
+import otokitsLogo from '../../assets/logos/otokits-logo.png'
 
 const props = defineProps({
   branchPerformanceData: {
@@ -276,6 +287,16 @@ const props = defineProps({
 
 const utilsStore = useUtilsStore()
 const { formatCurrency, formatNumber, formatPercentage } = utilsStore
+
+const dashboardStore = useDashboardStore()
+
+// Get actual date range from dashboard store
+const dateRangeText = computed(() => {
+  if (dashboardStore.startDate && dashboardStore.endDate) {
+    return `${dashboardStore.startDate} to ${dashboardStore.endDate}`
+  }
+  return null
+})
 
 // Business metrics calculations
 const totalBudget = computed(() => {
@@ -564,6 +585,17 @@ const debugBranchData = () => {
     )
     console.log('Order accuracy analysis:', orderAccuracy)
   })
+}
+
+// Get branch logo based on branch name
+const getBranchLogo = (branchName) => {
+  const name = branchName.toLowerCase()
+  if (name.includes('pitcar')) {
+    return pitcarLogo
+  } else if (name.includes('otokits')) {
+    return otokitsLogo
+  }
+  return null
 }
 
 // Expose debug function globally for browser console access

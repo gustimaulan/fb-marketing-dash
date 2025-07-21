@@ -3,12 +3,14 @@ import { ref, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useDashboardStore } from './stores/dashboard.js'
 import { useUtilsStore } from './stores/utils.js'
+import { leadsRatioCacheManager } from './api/leadsRatio.js'
 
 // Import dashboard components
 import OverviewDashboard from './components/dashboards/OverviewDashboard.vue'
 import CampaignDashboard from './components/dashboards/CampaignDashboard.vue'
 import AttributionDashboard from './components/dashboards/AttributionDashboard.vue'
 import BranchDashboard from './components/dashboards/BranchDashboard.vue'
+import DataManagementDashboard from './components/dashboards/DataManagementDashboard.vue'
 
 // Import shared components
 import DateRangePicker from './components/shared/DateRangePicker.vue'
@@ -56,7 +58,8 @@ const {
   setDateRange,
   setCustomDateRange,
   initializeDashboard,
-  handleCustomDateChange
+  handleCustomDateChange,
+  refreshData
 } = dashboardStore
 
 const { formatValue, formatCurrency, formatNumber, formatPercentage } = utilsStore
@@ -66,7 +69,8 @@ const tabs = [
   { id: 'overview', name: 'Overview', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z' },
   { id: 'campaigns', name: 'Campaigns', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
   { id: 'attribution', name: 'Attribution', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
-  { id: 'branches', name: 'Branches', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' }
+  { id: 'branches', name: 'Branches', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { id: 'data-management', name: 'Data Management', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10' }
 ]
 
 // Tab switching function
@@ -74,6 +78,31 @@ const switchTab = (tabId) => {
   console.log('Switching tab from', activeTab.value, 'to', tabId)
   activeTab.value = tabId
   console.log('Active tab changed to:', activeTab.value)
+}
+
+// Refresh leads data function
+const refreshLeadsData = async () => {
+  console.log('Refreshing leads data...')
+  console.log('Current dates:', { startDate: startDate.value, endDate: endDate.value })
+  
+  // If dates are not set, use current date range
+  if (!startDate.value || !endDate.value) {
+    console.log('No dates set, using current date range')
+    setDateRange('last7days')
+  }
+  
+  try {
+    // Clear leads ratio cache first
+    leadsRatioCacheManager.clearAll()
+    console.log('Leads ratio cache cleared')
+    
+    // Refresh all data including leads ratio
+    refreshData()
+    
+    console.log('Refresh completed')
+  } catch (error) {
+    console.error('Error refreshing leads data:', error)
+  }
 }
 
 // Lifecycle
@@ -267,6 +296,15 @@ onMounted(() => {
         <BranchDashboard 
           v-else-if="activeTab === 'branches'"
           :branchPerformanceData="branchPerformanceData"
+        />
+
+        <!-- Data Management Dashboard -->
+        <DataManagementDashboard 
+          v-else-if="activeTab === 'data-management'"
+          :leadsRatioData="leadsRatioData"
+          :leadsRatioLoading="leadsRatioLoading"
+          :leadsRatioError="leadsRatioError"
+          @refresh-leads-data="refreshLeadsData"
         />
 
         <!-- Invalid Tab State -->
