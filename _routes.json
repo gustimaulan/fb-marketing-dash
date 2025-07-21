@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/worker/*",
+    "/node_modules/*",
+    "/src/*",
+    "*.config.js",
+    "*.config.ts"
+  ]
+} 

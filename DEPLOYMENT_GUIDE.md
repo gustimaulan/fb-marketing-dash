@@ -11,6 +11,9 @@ The application was experiencing CORS issues when deployed to Cloudflare Pages. 
 First, deploy the worker that acts as a proxy:
 
 ```bash
+# Navigate to the worker directory
+cd worker
+
 # Install Wrangler CLI if not already installed
 npm install -g wrangler
 
