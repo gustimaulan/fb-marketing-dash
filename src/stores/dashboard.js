@@ -495,7 +495,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (preferences) {
       groupByMode.value = preferences.groupByMode || 'product'
       selectedProducts.value = preferences.selectedProducts || []
-      dateRange.value = preferences.dateRange || 'yesterday'
+      dateRange.value = preferences.dateRange || 'thismonth'
       columnConfig.value = { ...defaultColumnConfig, ...preferences.columnConfig }
       currentSort.value = preferences.currentSort || { column: null, direction: 'asc' }
     }

@@ -42,7 +42,21 @@ export default defineConfig({
       overlay: false
     },
     // Auto-open browser in development
-    open: true
+    open: true,
+    // Proxy configuration for CORS bypass
+    proxy: {
+      '/odoo': {
+        target: 'https://sokasistem.pitcar.co.id',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/odoo/, ''),
+        secure: true,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    }
   },
   // Enable CSS code splitting
   css: {

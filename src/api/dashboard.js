@@ -1,5 +1,5 @@
 // API functions for meta-ads-data fetching with enhanced caching
-const META_ADS_API = import.meta.env.VITE_DASHBOARD_API_URL || 'https://workflows.cekat.ai/webhook/meta-ads-data'
+const META_ADS_API = import.meta.env.VITE_DASHBOARD_META_ADS_API_URL
 
 // Caching configuration
 const CACHE_DURATION = 4 * 60 * 60 * 1000 // 4 hours - same as other APIs

@@ -1,5 +1,5 @@
 // API service for Odoo sales order data
-const SALES_ORDER_API = import.meta.env.VITE_SALES_ORDER_API_URL || 'https://workflows.cekat.ai/webhook/sales-order'
+const SALES_ORDER_API = import.meta.env.VITE_SALES_ORDER_API_URL
 
 // Caching configuration
 const CACHE_DURATION = 4 * 60 * 60 * 1000 // 4 hours - same as FB ads cache

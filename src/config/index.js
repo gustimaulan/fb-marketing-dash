@@ -2,7 +2,7 @@
 export const config = {
   // API Configuration
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || '',
+    odooBaseUrl: import.meta.env.VITE_ODOO_BASE_URL || 'https://sokasistem.pitcar.co.id',
     timeout: 30000,
   },
   

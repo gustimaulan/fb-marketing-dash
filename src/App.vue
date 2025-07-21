@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useDashboardStore } from './stores/dashboard.js'
 import { useUtilsStore } from './stores/utils.js'
+import { useAuthStore } from './stores/auth.js'
 import { leadsRatioCacheManager } from './api/leadsRatio.js'
 
 // Import dashboard components
@@ -11,6 +12,9 @@ import CampaignDashboard from './components/dashboards/CampaignDashboard.vue'
 import AttributionDashboard from './components/dashboards/AttributionDashboard.vue'
 import BranchDashboard from './components/dashboards/BranchDashboard.vue'
 import DataManagementDashboard from './components/dashboards/DataManagementDashboard.vue'
+
+// Import auth components
+import LoginPage from './components/auth/LoginPage.vue'
 
 // Import shared components
 import DateRangePicker from './components/shared/DateRangePicker.vue'
@@ -23,6 +27,7 @@ const activeTab = ref('overview') // Changed default to overview to show the lin
 // Use Pinia stores
 const dashboardStore = useDashboardStore()
 const utilsStore = useUtilsStore()
+const authStore = useAuthStore()
 
 // Destructure store properties and methods for easier access
 const {
@@ -63,6 +68,9 @@ const {
 } = dashboardStore
 
 const { formatValue, formatCurrency, formatNumber, formatPercentage } = utilsStore
+
+// Auth state
+const { isLoggedIn, userEmail, userName, isLoading: authLoading } = storeToRefs(authStore)
 
 // Tab configuration
 const tabs = [
@@ -105,33 +113,99 @@ const refreshLeadsData = async () => {
   }
 }
 
+// Methods
+const handleLogout = async () => {
+  await authStore.logout()
+}
+
 // Lifecycle
-onMounted(() => {
-  initializeDashboard()
+onMounted(async () => {
+  // Check for existing authentication
+  const isAuth = await authStore.checkAuth()
+  
+  if (isAuth) {
+    // User is authenticated, initialize dashboard
+    initializeDashboard()
+  }
+  
+  // Listen for login events to initialize dashboard
+  window.addEventListener('userLoggedIn', () => {
+    console.log('User logged in, initializing dashboard...')
+    initializeDashboard()
+  })
 })
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-      <!-- Header -->
-      <div class="mb-6 md:mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Campaign Performance Dashboard</h1>
-        <p class="mt-2 text-gray-600">Monitor and analyze your Facebook advertising campaigns</p>
+  <!-- Show login page if not authenticated -->
+  <LoginPage v-if="!isLoggedIn" />
+  
+  <!-- Show dashboard if authenticated -->
+  <div v-else class="min-h-screen bg-gray-50">
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <!-- Logo and Title -->
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+            <div class="ml-3">
+              <h1 class="text-xl font-semibold text-gray-900">Meta Marketing Dashboard</h1>
+            </div>
+          </div>
+          
+          <!-- User Menu -->
+          <div class="flex items-center space-x-4">
+            <!-- User Info -->
+            <div class="hidden sm:flex items-center space-x-3">
+              <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-medium text-gray-900">{{ userName || userEmail }}</p>
+                <p class="text-xs text-gray-500">Odoo Account</p>
+              </div>
+            </div>
+            
+            <!-- Logout Button -->
+            <button
+              @click="handleLogout"
+              :disabled="authLoading"
+              class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              {{ authLoading ? 'Signing out...' : 'Sign out' }}
+            </button>
+          </div>
+        </div>
       </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
 
       <!-- Tab Navigation -->
       <div class="mb-6 md:mb-8">
-        <nav class="flex flex-wrap gap-2 sm:space-x-8 sm:gap-0" aria-label="Tabs">
+        <nav class="flex flex-wrap gap-1 sm:gap-2" aria-label="Tabs">
           <button
             v-for="tab in tabs"
             :key="tab.id"
             @click="switchTab(tab.id)"
             :class="[
-              'flex items-center px-3 py-2 sm:px-4 sm:py-2 text-sm font-medium rounded-lg transition-colors',
+              'flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 border',
               activeTab === tab.id
-                ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-gray-200 hover:border-gray-300'
             ]"
           >
             <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
