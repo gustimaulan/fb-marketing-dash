@@ -6,6 +6,12 @@ export const config = {
     timeout: 30000,
   },
   
+  // Debug logging
+  debug: {
+    envUrl: import.meta.env.VITE_ODOO_BASE_URL,
+    finalUrl: import.meta.env.VITE_ODOO_BASE_URL || 'https://fb-marketing-dash-api.gmaulan47.workers.dev',
+  },
+  
   // Cache Configuration
   cache: {
     defaultTTL: 15 * 60 * 1000, // 15 minutes

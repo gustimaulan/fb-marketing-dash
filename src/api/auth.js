@@ -3,6 +3,14 @@ import { config } from '../config/index.js'
 // Odoo authentication API service
 export const authenticateWithOdoo = async (email, password) => {
   try {
+    // Debug logging
+    console.log('Auth config:', {
+      isDev: config.isDev,
+      odooBaseUrl: config.api.odooBaseUrl,
+      envUrl: config.debug.envUrl,
+      finalUrl: config.debug.finalUrl
+    })
+    
     // Use proxy in development, direct URL in production
     const baseUrl = config.isDev ? '/odoo' : config.api.odooBaseUrl
     const response = await fetch(`${baseUrl}/web/session/authenticate`, {
