@@ -33,13 +33,23 @@ export const authenticateWithOdoo = async (email, password) => {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    // Extract session ID from response headers
-    const sessionId = response.headers.get('Set-Cookie') || 
-                     response.headers.get('session_id') || 
-                     response.headers.get('X-Session-ID')
-    
+    // Odoo uses cookies for session management
+    // Extract session cookie from Set-Cookie header
+    const setCookieHeader = response.headers.get('Set-Cookie')
     console.log('Response headers:', Object.fromEntries(response.headers.entries()))
-    console.log('Extracted session ID:', sessionId)
+    console.log('Set-Cookie header:', setCookieHeader)
+    
+    // Extract session ID from cookie if present
+    let sessionId = null
+    if (setCookieHeader) {
+      // Parse the Set-Cookie header to extract session_id
+      const sessionMatch = setCookieHeader.match(/session_id=([^;]+)/)
+      if (sessionMatch) {
+        sessionId = sessionMatch[1]
+      }
+    }
+    
+    console.log('Extracted session ID from cookie:', sessionId)
 
     const data = await response.json()
     
@@ -86,13 +96,20 @@ export const logoutFromOdoo = async (sessionId) => {
   try {
     // Use proxy in development, direct URL in production
     const baseUrl = config.isDev ? '/odoo' : config.api.odooBaseUrl
+    
+    // Prepare headers - include session cookie if available
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    }
+    
+    if (sessionId) {
+      headers['Cookie'] = `session_id=${sessionId}`
+    }
+    
     const response = await fetch(`${baseUrl}/web/session/destroy`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Cookie': sessionId, // Include session cookie in logout request
-      },
+      headers: headers,
       body: JSON.stringify({
         jsonrpc: '2.0',
         params: {
@@ -125,13 +142,20 @@ export const validateSession = async (sessionId) => {
   try {
     // Use proxy in development, direct URL in production
     const baseUrl = config.isDev ? '/odoo' : config.api.odooBaseUrl
+    
+    // Prepare headers - include session cookie if available
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    }
+    
+    if (sessionId) {
+      headers['Cookie'] = `session_id=${sessionId}`
+    }
+    
     const response = await fetch(`${baseUrl}/web/session/get_session_info`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Cookie': sessionId, // Include session cookie in validation request
-      },
+      headers: headers,
       body: JSON.stringify({
         jsonrpc: '2.0',
         params: {
