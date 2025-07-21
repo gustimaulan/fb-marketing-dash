@@ -169,16 +169,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- Budget Recommendations -->
-            <div class="p-4 rounded-lg" :class="getBudgetRecommendationClass(branchData)">
-              <h5 class="font-medium mb-2" :class="getBudgetRecommendationTextClass(branchData)">
-                Budget Recommendation:
-              </h5>
-              <p class="text-sm" :class="getBudgetRecommendationTextClass(branchData)">
-                {{ getBudgetRecommendation(branchData) }}
-              </p>
-            </div>
           </div>
         </div>
       </div>
