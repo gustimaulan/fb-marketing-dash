@@ -29,3 +29,35 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
+env.production
+
+# Test and temporary files
+test-auth.js
+responseodooauth.json
+*.test.js
+*.spec.js
+
+# Documentation files (optional - uncomment if you want to ignore them)
+# DEPLOYMENT_GUIDE.md
+# AUTHENTICATION_SETUP.md
+# ORGANIZATION_GUIDE.md
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs and debugging
+*.log
+debug.log
