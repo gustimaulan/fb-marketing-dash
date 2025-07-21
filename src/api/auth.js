@@ -33,6 +33,14 @@ export const authenticateWithOdoo = async (email, password) => {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
+    // Extract session ID from response headers
+    const sessionId = response.headers.get('Set-Cookie') || 
+                     response.headers.get('session_id') || 
+                     response.headers.get('X-Session-ID')
+    
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+    console.log('Extracted session ID:', sessionId)
+
     const data = await response.json()
     
     // Check for Odoo-specific errors
@@ -51,13 +59,13 @@ export const authenticateWithOdoo = async (email, password) => {
         email: email,
         name: data.result.name || email,
         role: data.result.user_companies?.current_company?.[1] || 'User',
-        sessionId: data.result.session_id || null
+        // Don't store sessionId in user object
       }
 
       return {
         success: true,
         user: userInfo,
-        sessionId: data.result.session_id
+        sessionId: sessionId // Use the session ID from headers
       }
     } else {
       return {
@@ -83,6 +91,7 @@ export const logoutFromOdoo = async (sessionId) => {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'Cookie': sessionId, // Include session cookie in logout request
       },
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -121,6 +130,7 @@ export const validateSession = async (sessionId) => {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'Cookie': sessionId, // Include session cookie in validation request
       },
       body: JSON.stringify({
         jsonrpc: '2.0',

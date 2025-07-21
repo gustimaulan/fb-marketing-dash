@@ -38,15 +38,22 @@ export default {
       const response = await fetch(newRequest)
       
       // Clone the response and add CORS headers
+      const responseHeaders = new Headers(response.headers)
+      
+      // Remove any existing CORS headers to avoid duplicates
+      responseHeaders.delete('Access-Control-Allow-Origin')
+      responseHeaders.delete('Access-Control-Allow-Methods')
+      responseHeaders.delete('Access-Control-Allow-Headers')
+      
+      // Add our CORS headers
+      responseHeaders.set('Access-Control-Allow-Origin', '*')
+      responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+      responseHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+      
       const newResponse = new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
-        headers: {
-          ...Object.fromEntries(response.headers.entries()),
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-        },
+        headers: responseHeaders,
       })
 
       return newResponse
