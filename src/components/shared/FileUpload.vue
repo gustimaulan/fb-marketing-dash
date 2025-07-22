@@ -107,6 +107,9 @@
           <svg v-else-if="uploadStatus.type === 'error'" class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
+          <svg v-else-if="uploadStatus.type === 'info'" class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </div>
         <div class="ml-3">
           <p class="text-sm font-medium" :class="statusTextClasses">
@@ -119,7 +122,7 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 
 export default {
   name: 'FileUpload',
@@ -130,19 +133,35 @@ export default {
     const isProcessing = ref(false)
     const uploadStatus = ref(null)
     const isDragOver = ref(false)
+    const processingId = ref(null)
+    const pollingInterval = ref(null)
 
     const statusClasses = computed(() => {
       if (!uploadStatus.value) return ''
-      return uploadStatus.value.type === 'success' 
-        ? 'bg-green-50 border border-green-200' 
-        : 'bg-red-50 border border-red-200'
+      switch (uploadStatus.value.type) {
+        case 'success':
+          return 'bg-green-50 border border-green-200'
+        case 'error':
+          return 'bg-red-50 border border-red-200'
+        case 'info':
+          return 'bg-blue-50 border border-blue-200'
+        default:
+          return 'bg-gray-50 border border-gray-200'
+      }
     })
 
     const statusTextClasses = computed(() => {
       if (!uploadStatus.value) return ''
-      return uploadStatus.value.type === 'success' 
-        ? 'text-green-800' 
-        : 'text-red-800'
+      switch (uploadStatus.value.type) {
+        case 'success':
+          return 'text-green-800'
+        case 'error':
+          return 'text-red-800'
+        case 'info':
+          return 'text-blue-800'
+        default:
+          return 'text-gray-800'
+      }
     })
 
     const validateFile = (file) => {
@@ -199,9 +218,11 @@ export default {
       }
     }
 
-    const clearFile = () => {
+    const clearFile = (clearStatusMessage = true) => {
       selectedFile.value = null
-      clearStatus()
+      if (clearStatusMessage) {
+        clearStatus()
+      }
       // Reset file input
       const fileInput = document.getElementById('file-upload')
       if (fileInput) fileInput.value = ''
@@ -226,12 +247,179 @@ export default {
       uploadStatus.value = null
     }
 
+    const startPolling = (id) => {
+      processingId.value = id
+      isProcessing.value = true
+      
+      // Poll every 5 seconds for up to 10 minutes
+      let attempts = 0
+      const maxAttempts = 120 // 10 minutes
+      
+      pollingInterval.value = setInterval(async () => {
+        attempts++
+        
+        try {
+          const statusUrl = `${import.meta.env.VITE_LEADS_RATIO_API_URL}/status/${id}`
+          const response = await fetch(statusUrl)
+          
+          if (response.ok) {
+            const statusData = await response.json()
+            
+            if (statusData.status === 'completed') {
+              clearInterval(pollingInterval.value)
+              isProcessing.value = false
+              showStatus('success', `✅ Processing completed! ${statusData.message || 'Your data has been updated.'}`)
+              emit('upload-success', { 
+                file: selectedFile.value, 
+                result: statusData,
+                processingId: id
+              })
+              clearFile(true) // Clear status message
+            } else if (statusData.status === 'failed') {
+              clearInterval(pollingInterval.value)
+              isProcessing.value = false
+              showStatus('error', `❌ Processing failed: ${statusData.message || 'Unknown error occurred.'}`)
+              emit('upload-error', { 
+                file: selectedFile.value, 
+                error: statusData.message,
+                processingId: id
+              })
+            } else if (statusData.status === 'processing') {
+              // Continue polling, update status message
+              showStatus('info', `🔄 Processing... ${statusData.progress || ''}`)
+            }
+          }
+        } catch (error) {
+          console.warn('Status check failed:', error)
+        }
+        
+        // Stop polling after max attempts
+        if (attempts >= maxAttempts) {
+          clearInterval(pollingInterval.value)
+          isProcessing.value = false
+          showStatus('error', '⏰ Processing timeout. Please check the status manually.')
+        }
+      }, 5000)
+    }
+
+    const stopPolling = () => {
+      if (pollingInterval.value) {
+        clearInterval(pollingInterval.value)
+        pollingInterval.value = null
+      }
+      isProcessing.value = false
+    }
+
+    const startPollingWithCustomUrl = (statusUrl, fileName) => {
+      isProcessing.value = true
+      
+      // Poll every 5 seconds for up to 10 minutes
+      let attempts = 0
+      const maxAttempts = 120 // 10 minutes
+      
+      pollingInterval.value = setInterval(async () => {
+        attempts++
+        
+        try {
+          const response = await fetch(statusUrl)
+          
+          if (response.ok) {
+            const statusData = await response.json()
+            
+            if (statusData.status === 'completed' || statusData.success === true) {
+              clearInterval(pollingInterval.value)
+              isProcessing.value = false
+              showStatus('success', `✅ Processing completed for "${fileName}"! ${statusData.message || 'Your data has been updated.'}`)
+              emit('upload-success', { 
+                file: selectedFile.value, 
+                result: statusData,
+                fileName: fileName
+              })
+              clearFile(true) // Clear status message
+            } else if (statusData.status === 'failed' || statusData.success === false) {
+              clearInterval(pollingInterval.value)
+              isProcessing.value = false
+              showStatus('error', `❌ Processing failed for "${fileName}": ${statusData.message || 'Unknown error occurred.'}`)
+              emit('upload-error', { 
+                file: selectedFile.value, 
+                error: statusData.message,
+                fileName: fileName
+              })
+            } else if (statusData.status === 'processing' || statusData.progress) {
+              // Continue polling, update status message
+              const progress = statusData.progress || statusData.message || ''
+              showStatus('info', `🔄 Processing "${fileName}"... ${progress}`)
+            }
+          }
+        } catch (error) {
+          console.warn('Status check failed:', error)
+        }
+        
+        // Stop polling after max attempts
+        if (attempts >= maxAttempts) {
+          clearInterval(pollingInterval.value)
+          isProcessing.value = false
+          showStatus('error', `⏰ Processing timeout for "${fileName}". Please check the status manually.`)
+        }
+      }, 5000)
+    }
+
+    // Alternative: WebSocket-based status checking (uncomment if webhook supports WebSocket)
+    /*
+    const startWebSocketStatusCheck = (id) => {
+      const wsUrl = import.meta.env.VITE_LEADS_RATIO_WS_URL || 'wss://workflows.cekat.ai/ws/status'
+      const ws = new WebSocket(`${wsUrl}?id=${id}`)
+      
+      ws.onopen = () => {
+        console.log('WebSocket connected for status updates')
+        isProcessing.value = true
+      }
+      
+      ws.onmessage = (event) => {
+        try {
+          const statusData = JSON.parse(event.data)
+          
+          if (statusData.status === 'completed') {
+            ws.close()
+            isProcessing.value = false
+            showStatus('success', `✅ Processing completed! ${statusData.message || 'Your data has been updated.'}`)
+            emit('upload-success', { file: selectedFile.value, result: statusData, processingId: id })
+            clearFile()
+          } else if (statusData.status === 'failed') {
+            ws.close()
+            isProcessing.value = false
+            showStatus('error', `❌ Processing failed: ${statusData.message || 'Unknown error occurred.'}`)
+            emit('upload-error', { file: selectedFile.value, error: statusData.message, processingId: id })
+          } else if (statusData.status === 'processing') {
+            showStatus('info', `🔄 Processing... ${statusData.progress || ''}`)
+          }
+        } catch (error) {
+          console.warn('WebSocket message parsing failed:', error)
+        }
+      }
+      
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error)
+        ws.close()
+        // Fallback to polling
+        startPolling(id)
+      }
+      
+      ws.onclose = () => {
+        console.log('WebSocket connection closed')
+      }
+      
+      return ws
+    }
+    */
+
     const handleSubmit = async () => {
       if (!selectedFile.value) return
 
       isUploading.value = true
       isProcessing.value = false
       clearStatus()
+      stopPolling()
 
       try {
         // Create FormData to mimic n8n form submission
@@ -251,7 +439,6 @@ export default {
         const response = await fetch(apiUrl, {
           method: 'POST',
           body: formData,
-          // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
         })
 
         console.log('Response status:', response.status)
@@ -261,44 +448,128 @@ export default {
           throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
         }
 
-        // File uploaded successfully - show immediate success response
+        // File uploaded successfully - now check for processing ID
         isUploading.value = false
-        isProcessing.value = false
         
-        // Show immediate success message
-        showStatus('success', '✅ File uploaded successfully! Your Cekat Contacts data is being processed in the background.')
-        
-        // Log the response for debugging (but don't wait for it)
         const contentType = response.headers.get('content-type')
         if (contentType && contentType.includes('application/json')) {
           try {
             const result = await response.json()
-            console.log('n8n webhook response (background):', result)
+            console.log('n8n webhook response:', result)
+            
+            // Handle the specific webhook response format
+            if (Array.isArray(result) && result.length > 0) {
+              const responseData = result[0]
+              
+              if (responseData.success) {
+                // File uploaded successfully - check if we need to poll for processing status
+                const fileName = responseData.file?.fileName || selectedFile.value.name
+                const fileSize = responseData.file?.fileSize || formatFileSize(selectedFile.value.size)
+                
+                // Option 1: If webhook provides a processing ID, start polling
+                if (responseData.processingId || responseData.id) {
+                  const processingId = responseData.processingId || responseData.id
+                  showStatus('info', `✅ File "${fileName}" uploaded! Starting to process...`)
+                  startPolling(processingId)
+                } 
+                // Option 2: If webhook provides a status endpoint, use the file info to poll
+                else if (responseData.file?.url || responseData.statusUrl) {
+                  const statusUrl = responseData.statusUrl || `${responseData.file.url}/status`
+                  showStatus('info', `✅ File "${fileName}" uploaded! Checking processing status...`)
+                  startPollingWithCustomUrl(statusUrl, fileName)
+                }
+                // Option 3: Immediate success (no processing needed)
+                else {
+                  console.log('Showing success status for file:', fileName)
+                  showStatus('success', `✅ File "${fileName}" uploaded successfully!`)
+                  console.log('Current uploadStatus:', uploadStatus.value)
+                  emit('upload-success', { 
+                    file: selectedFile.value, 
+                    result: responseData,
+                    fileInfo: responseData.file
+                  })
+                  // Don't clear file immediately - let user see the success message
+                  setTimeout(() => {
+                    clearFile(false) // Don't clear status message
+                  }, 2000)
+                }
+              } else {
+                // Upload failed
+                showStatus('error', `❌ Upload failed: ${responseData.message || 'Unknown error'}`)
+                emit('upload-error', { 
+                  file: selectedFile.value, 
+                  error: responseData.message 
+                })
+              }
+            } else {
+              // Unexpected response format
+              showStatus('success', '✅ File uploaded successfully!')
+              emit('upload-success', { 
+                file: selectedFile.value, 
+                result: result
+              })
+              clearFile(false) // Don't clear status message
+            }
           } catch (jsonError) {
-            console.warn('Background response parsing failed:', jsonError)
+            console.warn('Response parsing failed:', jsonError)
+            showStatus('success', '✅ File uploaded successfully! Processing in background.')
+            clearFile(false) // Don't clear status message
           }
         } else {
+          // Text response - try to extract processing ID
           try {
             const textResult = await response.text()
-            console.log('n8n webhook text response (background):', textResult)
+            console.log('n8n webhook text response:', textResult)
+            
+            // Try to parse as JSON or extract ID from text
+            let processingId = null
+            let responseData = null
+            
+            try {
+              const parsed = JSON.parse(textResult)
+              
+              // Handle array format like the webhook response
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                responseData = parsed[0]
+                processingId = responseData.processingId || responseData.id
+              } else {
+                processingId = parsed.processingId || parsed.id
+                responseData = parsed
+              }
+            } catch (e) {
+              // Look for ID in text response
+              const idMatch = textResult.match(/processing[_-]?id[:\s]*([a-zA-Z0-9-_]+)/i)
+              if (idMatch) processingId = idMatch[1]
+            }
+            
+            if (processingId) {
+              const fileName = responseData?.file?.fileName || selectedFile.value.name
+              showStatus('info', `✅ File "${fileName}" uploaded! Starting to process...`)
+              startPolling(processingId)
+            } else if (responseData?.success) {
+              // Handle successful upload without processing ID
+              const fileName = responseData.file?.fileName || selectedFile.value.name
+              showStatus('success', `✅ File "${fileName}" uploaded successfully!`)
+              emit('upload-success', { 
+                file: selectedFile.value, 
+                result: responseData,
+                fileInfo: responseData.file
+              })
+              clearFile(false) // Don't clear status message
+            } else {
+              showStatus('success', '✅ File uploaded successfully! Processing in background.')
+              clearFile(false) // Don't clear status message
+            }
           } catch (textError) {
-            console.warn('Background text response failed:', textError)
+            console.warn('Text response failed:', textError)
+            showStatus('success', '✅ File uploaded successfully!')
+            clearFile(false) // Don't clear status message
           }
         }
-        
-        emit('upload-success', { 
-          file: selectedFile.value, 
-          result: { 
-            success: true, 
-            message: 'File uploaded successfully! Processing in background.' 
-          } 
-        })
-        
-        // Clear the file after successful upload
-        clearFile()
 
       } catch (error) {
         console.error('Upload error:', error)
+        stopPolling()
         
         // Provide more specific error messages
         let errorMessage = 'Upload failed'
@@ -318,9 +589,13 @@ export default {
         emit('upload-error', { file: selectedFile.value, error: error.message })
       } finally {
         isUploading.value = false
-        isProcessing.value = false
       }
     }
+
+    // Cleanup on component unmount
+    onUnmounted(() => {
+      stopPolling()
+    })
 
     return {
       selectedFile,
@@ -336,7 +611,9 @@ export default {
       handleDrop,
       clearFile,
       formatFileSize,
-      handleSubmit
+      handleSubmit,
+      stopPolling,
+      startPollingWithCustomUrl
     }
   }
 }
