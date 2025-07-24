@@ -11,6 +11,7 @@ import OverviewDashboard from './components/dashboards/OverviewDashboard.vue'
 import CampaignDashboard from './components/dashboards/CampaignDashboard.vue'
 import AttributionDashboard from './components/dashboards/AttributionDashboard.vue'
 import BranchDashboard from './components/dashboards/BranchDashboard.vue'
+import ProductPerformanceDashboard from './components/dashboards/ProductPerformanceDashboard.vue'
 import DataManagementDashboard from './components/dashboards/DataManagementDashboard.vue'
 
 // Import auth components
@@ -52,7 +53,8 @@ const {
   leadsRatioData,
   leadsRatioLoading,
   leadsRatioError,
-  branchPerformanceData
+  branchPerformanceData,
+  salesOrderData
 } = storeToRefs(dashboardStore)
 
 const {
@@ -78,6 +80,7 @@ const tabs = [
   { id: 'campaigns', name: 'Campaigns', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
   { id: 'attribution', name: 'Attribution', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
   { id: 'branches', name: 'Branches', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { id: 'products', name: 'Products', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
   { id: 'data-management', name: 'Data Management', icon: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10' }
 ]
 
@@ -370,6 +373,12 @@ onMounted(async () => {
         <BranchDashboard 
           v-else-if="activeTab === 'branches'"
           :branchPerformanceData="branchPerformanceData"
+        />
+
+        <!-- Product Performance Dashboard -->
+        <ProductPerformanceDashboard 
+          v-else-if="activeTab === 'products'"
+          :salesOrderData="salesOrderData"
         />
 
         <!-- Data Management Dashboard -->

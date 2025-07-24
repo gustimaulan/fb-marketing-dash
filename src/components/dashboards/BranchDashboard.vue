@@ -105,9 +105,7 @@
 
             <!-- Sales Order Data (Actual) -->
             <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-              <h5 class="font-semibold text-green-800 mb-3 text-center">
-                {{ branchData.metrics.sales_order.orders > 0 ? '✅ Sales Order Data (Actual)' : '📊 Sales Order Data (No Orders)' }}
-              </h5>
+              <h5 class="font-semibold text-green-800 mb-3 text-center">✅ Sales Order Data (Actual)</h5>
               <div class="space-y-2">
                 <div class="flex justify-between">
                   <span class="text-sm text-green-600">Revenue:</span>
@@ -119,20 +117,11 @@
                 </div>
                 <div class="flex justify-between">
                   <span class="text-sm text-green-600">ROAS:</span>
-                  <span class="font-bold text-green-900">
-                    {{ branchData.metrics.sales_order.orders > 0 ? formatNumber(branchData.metrics.sales_order.roas, 2) + 'x' : 'N/A' }}
-                  </span>
+                  <span class="font-bold text-green-900">{{ formatNumber(branchData.metrics.sales_order.roas, 2) }}x</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-sm text-green-600">Avg Order Value:</span>
-                  <span class="font-bold text-green-900">
-                    {{ branchData.metrics.sales_order.orders > 0 ? formatCurrency(branchData.metrics.sales_order.avgOrderValue) : 'N/A' }}
-                  </span>
-                </div>
-                <div v-if="branchData.metrics.sales_order.orders === 0" class="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
-                  <p class="text-xs text-yellow-700 text-center">
-                    No sales orders in this date range. Monitor leads and conversion funnel.
-                  </p>
+                  <span class="font-bold text-green-900">{{ formatCurrency(branchData.metrics.sales_order.avgOrderValue) }}</span>
                 </div>
               </div>
             </div>
@@ -148,16 +137,12 @@
               <div class="mb-3 p-3 bg-white rounded border">
                 <div class="flex justify-between items-center mb-2">
                   <span class="text-sm font-medium text-gray-700">ROAS Performance</span>
-                  <span v-if="branchData.metrics.sales_order.orders > 0" class="text-lg font-bold" :class="branchData.metrics.sales_order.roas > 2 ? 'text-green-600' : 'text-red-600'">
+                  <span class="text-lg font-bold" :class="branchData.metrics.sales_order.roas > 2 ? 'text-green-600' : 'text-red-600'">
                     {{ formatNumber(branchData.metrics.sales_order.roas, 2) }}x
                   </span>
-                  <span v-else class="text-lg font-bold text-gray-400">N/A</span>
                 </div>
                 <div class="text-xs text-gray-500">
-                  <span v-if="branchData.metrics.sales_order.orders === 0" class="text-yellow-600 font-medium">
-                    📊 No orders to calculate ROAS
-                  </span>
-                  <span v-else-if="branchData.metrics.sales_order.roas > overallROAS" class="text-green-600 font-medium">
+                  <span v-if="branchData.metrics.sales_order.roas > overallROAS" class="text-green-600 font-medium">
                     ✅ {{ formatNumber(((branchData.metrics.sales_order.roas / overallROAS) - 1) * 100, 1) }}% above average
                   </span>
                   <span v-else class="text-red-600 font-medium">
@@ -170,16 +155,12 @@
               <div class="p-3 bg-white rounded border">
                 <div class="flex justify-between items-center mb-2">
                   <span class="text-sm font-medium text-gray-700">Cost per Order</span>
-                  <span v-if="branchData.metrics.sales_order.orders > 0" class="text-lg font-bold" :class="branchData.metrics.sales_order.cost_per_order <= averageCostPerOrder ? 'text-green-600' : 'text-red-600'">
+                  <span class="text-lg font-bold" :class="branchData.metrics.sales_order.cost_per_order <= averageCostPerOrder ? 'text-green-600' : 'text-red-600'">
                     {{ formatCurrency(branchData.metrics.sales_order.cost_per_order) }}
                   </span>
-                  <span v-else class="text-lg font-bold text-gray-400">N/A</span>
                 </div>
                 <div class="text-xs text-gray-500">
-                  <span v-if="branchData.metrics.sales_order.orders === 0" class="text-yellow-600 font-medium">
-                    📊 No orders to calculate cost efficiency
-                  </span>
-                  <span v-else-if="branchData.metrics.sales_order.cost_per_order <= averageCostPerOrder" class="text-green-600 font-medium">
+                  <span v-if="branchData.metrics.sales_order.cost_per_order <= averageCostPerOrder" class="text-green-600 font-medium">
                     ✅ {{ formatNumber(((averageCostPerOrder / branchData.metrics.sales_order.cost_per_order) - 1) * 100, 1) }}% more efficient
                   </span>
                   <span v-else class="text-red-600 font-medium">

@@ -317,9 +317,6 @@ export const calculateAttributionMetrics = (salesOrders, fbMetrics) => {
 
 // Calculate real branch performance using actual sales order data
 export const calculateBranchMetrics = (salesOrders, fbMetrics, branchRatios) => {
-  // Get all branches from leads ratio data
-  const allBranches = branchRatios?.branches || []
-  
   // Group sales orders by branch
   const branchSalesData = {}
   const fbOrders = getFbAttributedOrders(salesOrders)
@@ -338,14 +335,14 @@ export const calculateBranchMetrics = (salesOrders, fbMetrics, branchRatios) => 
     branchSalesData[branchName].totalOrders++
   })
 
-  // Calculate metrics for ALL branches (even those with no sales orders)
+  // Calculate metrics for each branch
   const branchMetrics = []
   
-  allBranches.forEach(branch => {
-    const branchName = branch.name
-    const salesData = branchSalesData[branchName] || { orders: [], totalRevenue: 0, totalOrders: 0 }
+  Object.entries(branchSalesData).forEach(([branchName, salesData]) => {
+    // Get branch ratio for cost allocation (fallback to equal split if not found)
+    const branchRatio = branchRatios?.branches?.find(b => b.name === branchName)?.ratio || 
+                       (1 / Object.keys(branchSalesData).length)
     
-    const branchRatio = branch.ratio
     const spendForBranch = fbMetrics.spend * branchRatio
     
     // FB REPORTED DATA (allocated by ratio)
