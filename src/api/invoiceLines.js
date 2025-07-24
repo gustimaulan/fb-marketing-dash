@@ -191,10 +191,14 @@ const cleanLineName = (lineName) => {
 // Determine if a line is revenue-generating (not a balancing entry)
 const isRevenueGeneratingLine = (line) => {
   const name = line.line_name?.toLowerCase() || ''
+  const accountId = line.account_id
   
   // Exclude balancing entries
   if (name.includes('inv/') || name.includes('invoice')) return false
   if (name.includes('discount')) return false
+  
+  // Exclude tax offset entries (account_id 67)
+  if (accountId === '67') return false
   
   // Include revenue-generating items
   if (parseFloat(line.credit || 0) > 0) return true
