@@ -197,8 +197,8 @@ const isRevenueGeneratingLine = (line) => {
   if (name.includes('inv/') || name.includes('invoice')) return false
   if (name.includes('discount')) return false
   
-  // Exclude tax offset entries (account_id 67)
-  if (accountId === '67') return false
+  // Exclude tax entries (account_id 55 and 67)
+  if (accountId === '55' || accountId === '67') return false
   
   // Include revenue-generating items
   if (parseFloat(line.credit || 0) > 0) return true
