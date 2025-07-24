@@ -212,6 +212,17 @@ export const getProductPerformanceData = (salesOrders, invoiceLines) => {
     }
   })
 
+  // Calculate discounts per invoice
+  const invoiceDiscounts = new Map()
+  invoiceLines.forEach(line => {
+    if (line.line_name?.toLowerCase().includes('discount')) {
+      const discountAmount = parseFloat(line.debit || 0)
+      if (discountAmount > 0) {
+        invoiceDiscounts.set(line.invoice_number, (invoiceDiscounts.get(line.invoice_number) || 0) + discountAmount)
+      }
+    }
+  })
+
   // Group invoice lines by service/product
   const productStats = new Map()
   
@@ -236,7 +247,9 @@ export const getProductPerformanceData = (salesOrders, invoiceLines) => {
         fbAttributedOrders: 0,
         fbAttributedRevenue: 0,
         orders: [],
-        invoiceNumbers: new Set()
+        invoiceNumbers: new Set(),
+        invoiceGrossRevenue: new Map(), // Track gross revenue per invoice
+        invoiceDiscounts: new Map() // Track discounts per invoice
       })
     }
     
@@ -254,6 +267,14 @@ export const getProductPerformanceData = (salesOrders, invoiceLines) => {
       }
     }
     
+    // Track gross revenue per invoice
+    stats.invoiceGrossRevenue.set(line.invoice_number, 
+      (stats.invoiceGrossRevenue.get(line.invoice_number) || 0) + revenue)
+    
+    // Track discounts per invoice
+    const invoiceDiscount = invoiceDiscounts.get(line.invoice_number) || 0
+    stats.invoiceDiscounts.set(line.invoice_number, invoiceDiscount)
+    
     stats.totalRevenue += revenue
     stats.totalQuantity++
     
@@ -269,15 +290,34 @@ export const getProductPerformanceData = (salesOrders, invoiceLines) => {
     })
   })
   
-  // Calculate averages and convert to array
-  const result = Array.from(productStats.values()).map(stats => ({
-    ...stats,
-    avgOrderValue: stats.totalOrders > 0 ? stats.totalRevenue / stats.totalOrders : 0,
-    fbAttributedRevenue: stats.orders
-      .filter(order => order.isFromFbAds)
-      .reduce((sum, order) => sum + order.amount, 0),
-    invoiceNumbers: Array.from(stats.invoiceNumbers)
-  }))
+  // Calculate net revenue (gross - discounts) and convert to array
+  const result = Array.from(productStats.values()).map(stats => {
+    // Calculate net revenue per invoice
+    let totalNetRevenue = 0
+    let fbNetRevenue = 0
+    
+    stats.invoiceNumbers.forEach(invoiceNumber => {
+      const grossRevenue = stats.invoiceGrossRevenue.get(invoiceNumber) || 0
+      const discount = stats.invoiceDiscounts.get(invoiceNumber) || 0
+      const netRevenue = grossRevenue - discount
+      
+      totalNetRevenue += netRevenue
+      
+      // Check if this invoice is from FB ads
+      const salesOrder = salesOrderMap.get(invoiceNumber)
+      if (salesOrder && (salesOrder.customer_sumber_info === 'fb_ads' || salesOrder.customer_sumber_info === 'ig_ads')) {
+        fbNetRevenue += netRevenue
+      }
+    })
+    
+    return {
+      ...stats,
+      totalRevenue: totalNetRevenue, // Use net revenue (after discounts)
+      avgOrderValue: stats.totalOrders > 0 ? totalNetRevenue / stats.totalOrders : 0,
+      fbAttributedRevenue: fbNetRevenue, // Use net revenue for FB attribution
+      invoiceNumbers: Array.from(stats.invoiceNumbers)
+    }
+  })
   
   return result.sort((a, b) => b.totalRevenue - a.totalRevenue)
 }
@@ -304,9 +344,9 @@ export const getCategoryPerformance = (productPerformanceData) => {
     const stats = categoryStats.get(category)
     stats.totalProducts++
     stats.totalOrders += product.totalOrders
-    stats.totalRevenue += product.totalRevenue
+    stats.totalRevenue += product.totalRevenue // Already net revenue from product calculation
     stats.fbAttributedOrders += product.fbAttributedOrders
-    stats.fbAttributedRevenue += product.fbAttributedRevenue
+    stats.fbAttributedRevenue += product.fbAttributedRevenue // Already net revenue from product calculation
     stats.products.push(product)
   })
   
