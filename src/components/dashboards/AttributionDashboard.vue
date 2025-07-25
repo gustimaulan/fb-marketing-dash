@@ -38,7 +38,7 @@
           <div class="space-y-4">
             <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
               <div>
-                <div class="font-medium text-blue-900">FB Ad Impressions</div>
+                <div class="font-medium text-blue-900">Meta Ad Impressions</div>
                 <div class="text-sm text-blue-700">Campaign reach</div>
               </div>
               <div class="text-right">
@@ -48,7 +48,7 @@
             
             <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
               <div>
-                <div class="font-medium text-green-900">FB Purchases</div>
+                <div class="font-medium text-green-900">Meta Purchases</div>
                 <div class="text-sm text-green-700">Platform reported</div>
               </div>
               <div class="text-right">
@@ -59,7 +59,7 @@
             <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
               <div>
                 <div class="font-medium text-purple-900">Actual Sales</div>
-                <div class="text-sm text-purple-700">From FB advertising</div>
+                <div class="text-sm text-purple-700">From Meta Ads</div>
               </div>
               <div class="text-right">
                 <div class="font-bold text-purple-900">{{ formatNumber(attributionMetrics.fbAttributedOrders) }}</div>
@@ -69,7 +69,7 @@
             <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
               <div>
                 <div class="font-medium text-orange-900">Attribution Rate</div>
-                <div class="text-sm text-orange-700">FB purchases → Sales</div>
+                <div class="text-sm text-orange-700">Meta purchases → Sales</div>
               </div>
               <div class="text-right">
                 <div class="font-bold text-orange-900">{{ formatPercentage(attributionMetrics.conversionRate) }}</div>
@@ -84,7 +84,7 @@
           <div class="space-y-4">
             <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
               <div>
-                <div class="font-medium text-blue-900">FB Reported Revenue</div>
+                <div class="font-medium text-blue-900">Meta Reported Revenue</div>
                 <div class="text-sm text-blue-700">Platform tracking</div>
               </div>
               <div class="text-right">
@@ -94,7 +94,7 @@
             
             <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
               <div>
-                <div class="font-medium text-green-900">Actual FB Revenue</div>
+                <div class="font-medium text-green-900">Actual Meta Revenue</div>
                 <div class="text-sm text-green-700">From sales orders</div>
               </div>
               <div class="text-right">
@@ -114,7 +114,7 @@
             
             <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
               <div>
-                <div class="font-medium text-orange-900">FB Attribution %</div>
+                <div class="font-medium text-orange-900">Meta Attribution %</div>
                 <div class="text-sm text-orange-700">Share of total revenue</div>
               </div>
               <div class="text-right">
@@ -143,7 +143,7 @@
                 <p class="text-2xl font-bold text-blue-900">
                   {{ formatPercentage(attributionMetrics.conversionRate) }}
                 </p>
-                <p class="text-xs text-blue-700">of FB purchases tracked</p>
+                <p class="text-xs text-blue-700">of Meta purchases tracked</p>
               </div>
             </div>
           </div>
@@ -160,7 +160,7 @@
                 <p class="text-2xl font-bold text-green-900">
                   {{ formatNumber(attributionMetrics.trueROAS) }}x
                 </p>
-                <p class="text-xs text-green-700">vs {{ formatNumber(fbMetrics.roas) }}x FB reported</p>
+                <p class="text-xs text-green-700">vs {{ formatNumber(fbMetrics.roas) }}x Meta reported</p>
               </div>
             </div>
           </div>
@@ -177,7 +177,7 @@
                 <p class="text-2xl font-bold text-purple-900">
                   {{ formatCurrency(attributionMetrics.avgOrderValue) }}
                 </p>
-                <p class="text-xs text-purple-700">from FB attributed orders</p>
+                <p class="text-xs text-purple-700">from Meta attributed orders</p>
               </div>
             </div>
           </div>

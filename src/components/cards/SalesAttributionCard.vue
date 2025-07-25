@@ -5,7 +5,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <!-- FB Attributed Revenue -->
       <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
-        <h4 class="text-sm font-medium text-blue-700">FB Attributed Revenue</h4>
+        <h4 class="text-sm font-medium text-blue-700">Meta Attributed Revenue</h4>
         <p class="text-2xl font-bold text-blue-900 mt-1">{{ formatCurrency(attributionMetrics.fbAttributedRevenue) }}</p>
         <p class="text-xs text-blue-600 mt-1">{{ attributionMetrics.fbAttributedOrders }} orders</p>
       </div>
@@ -14,12 +14,12 @@
       <div class="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
         <h4 class="text-sm font-medium text-green-700">True ROAS</h4>
         <p class="text-2xl font-bold text-green-900 mt-1">{{ formatNumber(attributionMetrics.trueROAS) }}x</p>
-        <p class="text-xs text-green-600 mt-1">vs {{ formatNumber(fbMetrics.roas) }}x FB ROAS</p>
+        <p class="text-xs text-green-600 mt-1">vs {{ formatNumber(fbMetrics.roas) }}x Meta ROAS</p>
       </div>
       
       <!-- Conversion Rate -->
       <div class="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
-        <h4 class="text-sm font-medium text-purple-700">FB → Order Rate</h4>
+        <h4 class="text-sm font-medium text-purple-700">Meta → Order Rate</h4>
         <p class="text-2xl font-bold text-purple-900 mt-1">{{ formatPercentage(attributionMetrics.conversionRate) }}</p>
         <p class="text-xs text-purple-600 mt-1">{{ attributionMetrics.fbAttributedOrders }} / {{ fbMetrics.purchases }} purchases</p>
       </div>

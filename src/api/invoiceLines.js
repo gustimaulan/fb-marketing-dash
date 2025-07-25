@@ -152,6 +152,12 @@ const extractServiceCategory = (lineName) => {
   if (name.includes('analisa') || name.includes('cek') || name.includes('check')) {
     return 'Diagnostic Services'
   }
+  if (name.includes('tune up') || name.includes('service berkala')) {
+    return 'Maintenance'
+  }
+  if (name.includes('ml')) {
+    return 'Chemical'
+  }
   if (name.includes('rem') || name.includes('brake')) {
     return 'Brake System'
   }
@@ -190,20 +196,8 @@ const cleanLineName = (lineName) => {
 
 // Determine if a line is revenue-generating (not a balancing entry)
 const isRevenueGeneratingLine = (line) => {
-  const name = line.line_name?.toLowerCase() || ''
-  const accountId = line.account_id
-  
-  // Exclude balancing entries
-  if (name.includes('inv/') || name.includes('invoice')) return false
-  if (name.includes('discount')) return false
-  
-  // Exclude tax entries (account_id 55 and 67)
-  if (accountId === '55' || accountId === '67') return false
-  
-  // Include revenue-generating items
-  if (parseFloat(line.credit || 0) > 0) return true
-  
-  return false
+  // Only include account_id 64 as revenue
+  return line.account_id === '64' && !line.line_name?.toLowerCase().includes('discount') && !line.line_name?.toLowerCase().includes('inv/') && parseFloat(line.credit || 0) > 0
 }
 
 // Get product performance data by combining sales orders and invoice lines
@@ -224,6 +218,15 @@ export const getProductPerformanceData = (salesOrders, invoiceLines) => {
       if (discountAmount > 0) {
         invoiceDiscounts.set(line.invoice_number, (invoiceDiscounts.get(line.invoice_number) || 0) + discountAmount)
       }
+    }
+  })
+
+  // Calculate total gross revenue per invoice for proportional discount distribution
+  const invoiceGrossRevenue = new Map()
+  invoiceLines.forEach(line => {
+    if (line.isRevenueLine) {
+      const currentRevenue = invoiceGrossRevenue.get(line.invoice_number) || 0
+      invoiceGrossRevenue.set(line.invoice_number, currentRevenue + parseFloat(line.credit || 0))
     }
   })
 
@@ -294,16 +297,22 @@ export const getProductPerformanceData = (salesOrders, invoiceLines) => {
     })
   })
   
-  // Calculate net revenue (gross - discounts) and convert to array
+  // Calculate net revenue with proportional discount distribution
   const result = Array.from(productStats.values()).map(stats => {
-    // Calculate net revenue per invoice
     let totalNetRevenue = 0
     let fbNetRevenue = 0
     
     stats.invoiceNumbers.forEach(invoiceNumber => {
-      const grossRevenue = stats.invoiceGrossRevenue.get(invoiceNumber) || 0
-      const discount = stats.invoiceDiscounts.get(invoiceNumber) || 0
-      const netRevenue = grossRevenue - discount
+      const productGrossRevenue = stats.invoiceGrossRevenue.get(invoiceNumber) || 0
+      const totalInvoiceGrossRevenue = invoiceGrossRevenue.get(invoiceNumber) || 0
+      const totalInvoiceDiscount = invoiceDiscounts.get(invoiceNumber) || 0
+      
+      // Calculate proportional discount for this product
+      const proportionalDiscount = totalInvoiceGrossRevenue > 0 
+        ? (productGrossRevenue / totalInvoiceGrossRevenue) * totalInvoiceDiscount 
+        : 0
+      
+      const netRevenue = productGrossRevenue - proportionalDiscount
       
       totalNetRevenue += netRevenue
       
@@ -316,7 +325,7 @@ export const getProductPerformanceData = (salesOrders, invoiceLines) => {
     
     return {
       ...stats,
-      totalRevenue: totalNetRevenue, // Use net revenue (after discounts)
+      totalRevenue: totalNetRevenue, // Use net revenue (after proportional discounts)
       avgOrderValue: stats.totalOrders > 0 ? totalNetRevenue / stats.totalOrders : 0,
       fbAttributedRevenue: fbNetRevenue, // Use net revenue for FB attribution
       invoiceNumbers: Array.from(stats.invoiceNumbers)
@@ -411,4 +420,4 @@ export const invoiceLinesCacheManager = {
     // Fetch fresh data
     return await fetchInvoiceLinesWithCache({ forceFresh: true })
   }
-} 
+}

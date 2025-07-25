@@ -1,17 +1,15 @@
 <template>
   <div class="space-y-8">
     <!-- Product Performance Header -->
-    <div class="mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Product & Service Performance</h2>
-      <p class="mt-2 text-gray-600">
-        Analyze your most popular services and products with Facebook attribution tracking.
-      </p>
-    </div>
+    <DashboardHeader 
+      title="Meta Ads Product & Service Performance"
+      description="Analyze your most popular services and products attributed to Facebook & Instagram advertising."
+    />
 
     <!-- Loading State -->
     <div v-if="loading" class="flex justify-center items-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      <span class="ml-3 text-gray-600">Loading product performance data...</span>
+      <span class="ml-3 text-gray-600">Loading Meta ads product performance data...</span>
     </div>
 
     <!-- Error State -->
@@ -31,117 +29,56 @@
 
     <!-- Content -->
     <div v-else-if="productPerformanceData.length > 0" class="space-y-8">
-      <!-- Summary Cards -->
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <!-- Total Products -->
+      <!-- Summary Cards - Meta Attribution Only -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Total Products with Meta Attribution -->
         <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg border border-blue-200">
-          <h3 class="text-lg font-medium text-blue-800 mb-4">📦 Total Products</h3>
-          <div class="text-3xl font-bold text-blue-900">{{ formatNumber(totalProducts) }}</div>
-          <p class="text-sm text-blue-600 mt-2">Unique services/products</p>
+          <h3 class="text-lg font-medium text-blue-800 mb-4">📦 Meta Attributed Products</h3>
+          <div class="text-3xl font-bold text-blue-900">{{ formatNumber(metaAttributedProducts) }}</div>
+          <p class="text-sm text-blue-600 mt-2">Products with Meta attribution</p>
         </div>
 
-        <!-- Total Revenue -->
-        <div class="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
-          <h3 class="text-lg font-medium text-green-800 mb-4">💰 Total Revenue</h3>
-          <div class="text-3xl font-bold text-green-900">{{ formatCurrency(totalRevenue) }}</div>
-          <p class="text-sm text-green-600 mt-2">From all products</p>
-        </div>
-
-        <!-- FB Attributed Revenue -->
+        <!-- Meta Attributed Revenue -->
         <div class="bg-gradient-to-r from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200">
-          <h3 class="text-lg font-medium text-purple-800 mb-4">📱 FB Revenue</h3>
+          <h3 class="text-lg font-medium text-purple-800 mb-4">📱 Meta Revenue (Net After Discount)</h3>
           <div class="text-3xl font-bold text-purple-900">{{ formatCurrency(fbAttributedRevenue) }}</div>
-          <p class="text-sm text-purple-600 mt-2">{{ formatPercentage(fbAttributionRate) }} of total</p>
+          <p class="text-sm text-purple-600 mt-2">From Meta attribution</p>
         </div>
 
-        <!-- Top Category -->
+        <!-- Top Meta Category -->
         <div class="bg-gradient-to-r from-orange-50 to-orange-100 p-6 rounded-lg border border-orange-200">
-          <h3 class="text-lg font-medium text-orange-800 mb-4">🏆 Top Category</h3>
-          <div class="text-lg font-bold text-orange-900">{{ topCategory }}</div>
-          <p class="text-sm text-orange-600 mt-2">{{ formatCurrency(topCategoryRevenue) }}</p>
+          <h3 class="text-lg font-medium text-orange-800 mb-4">🏆 Top Meta Category</h3>
+          <div class="text-lg font-bold text-orange-900">{{ topMetaCategory }}</div>
+          <p class="text-sm text-orange-600 mt-2">{{ formatCurrency(topMetaCategoryRevenue) }}</p>
         </div>
       </div>
 
-      <!-- Category Performance -->
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 class="text-xl font-bold text-gray-900 mb-6">📊 Performance by Category</h3>
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orders</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FB Orders</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FB Revenue</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attribution Rate</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="category in categoryPerformance" :key="category.category" class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ category.category }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatNumber(category.totalProducts) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatNumber(category.totalOrders) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ formatCurrency(category.totalRevenue) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatNumber(category.fbAttributedOrders) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-600">{{ formatCurrency(category.fbAttributedRevenue) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span class="px-2 py-1 rounded-full text-xs font-medium"
-                        :class="category.fbAttributionRate > 50 ? 'bg-green-100 text-green-800' : 
-                               category.fbAttributionRate > 25 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'">
-                    {{ formatPercentage(category.fbAttributionRate) }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <!-- Category Performance - Meta Attribution Only -->
+      <DataTable
+        title="📊 Meta Ads Performance by Category"
+        :data="metaCategoryPerformance"
+        :columns="categoryColumns"
+        :loading="loading"
+        empty-title="No category data available"
+        empty-message="No Meta ads category performance found for the selected date range."
+      />
 
-      <!-- Top Products -->
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 class="text-xl font-bold text-gray-900 mb-6">🏆 Top Performing Products</h3>
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product/Service</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orders</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Order Value</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FB Orders</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FB Revenue</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="product in topProducts" :key="product.lineName" class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">{{ product.displayName }}</div>
-                  <div class="text-xs text-gray-500">{{ product.lineName }}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {{ product.serviceCategory }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatNumber(product.totalOrders) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ formatCurrency(product.totalRevenue) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatCurrency(product.avgOrderValue) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatNumber(product.fbAttributedOrders) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-600">{{ formatCurrency(product.fbAttributedRevenue) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <!-- Top Products - Meta Attribution Only -->
+      <DataTable
+        title="🏆 Top Meta Ads Products"
+        :data="topMetaProducts"
+        :columns="productColumns"
+        :loading="loading"
+        empty-title="No product data available"
+        empty-message="No Meta ads products found for the selected date range."
+        @row-click="selectedProduct = $event"
+      />
 
-      <!-- Product Details Modal -->
+      <!-- Product Details Modal - Meta Attribution Focus -->
       <div v-if="selectedProduct" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
           <div class="mt-3">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">{{ selectedProduct.displayName }}</h3>
+            <h3 class="text-lg font-medium text-gray-900 mb-4">{{ selectedProduct.displayName }} - Meta Ads Performance</h3>
             <div class="space-y-4">
               <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -149,23 +86,23 @@
                   <p class="text-sm text-gray-900">{{ selectedProduct.serviceCategory }}</p>
                 </div>
                 <div>
-                  <label class="text-sm font-medium text-gray-500">Total Orders</label>
-                  <p class="text-sm text-gray-900">{{ formatNumber(selectedProduct.totalOrders) }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-500">Total Revenue</label>
-                  <p class="text-sm text-gray-900">{{ formatCurrency(selectedProduct.totalRevenue) }}</p>
-                </div>
-                <div>
-                  <label class="text-sm font-medium text-gray-500">FB Attributed Orders</label>
+                  <label class="text-sm font-medium text-gray-500">Meta Orders</label>
                   <p class="text-sm text-gray-900">{{ formatNumber(selectedProduct.fbAttributedOrders) }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-500">Meta Revenue</label>
+                  <p class="text-sm text-gray-900">{{ formatCurrency(selectedProduct.fbAttributedRevenue) }}</p>
+                </div>
+                <div>
+                  <label class="text-sm font-medium text-gray-500">Avg Meta Order Value</label>
+                  <p class="text-sm text-gray-900">{{ formatCurrency(selectedProduct.metaAvgOrderValue) }}</p>
                 </div>
               </div>
               
               <div>
-                <label class="text-sm font-medium text-gray-500">Recent Orders</label>
+                <label class="text-sm font-medium text-gray-500">Recent Meta Ads Orders</label>
                 <div class="mt-2 max-h-60 overflow-y-auto">
-                  <div v-for="order in selectedProduct.orders.slice(0, 10)" :key="order.invoiceNumber" 
+                  <div v-for="order in selectedProduct.metaOrders.slice(0, 10)" :key="order.invoiceNumber" 
                        class="flex justify-between items-center py-2 border-b border-gray-100">
                     <div>
                       <p class="text-sm font-medium text-gray-900">{{ order.partnerName }}</p>
@@ -173,9 +110,8 @@
                     </div>
                     <div class="text-right">
                       <p class="text-sm font-medium text-gray-900">{{ formatCurrency(order.amount) }}</p>
-                      <span class="text-xs px-2 py-1 rounded-full"
-                            :class="order.isFromFbAds ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'">
-                        {{ order.isFromFbAds ? 'FB Ads' : order.customerSource }}
+                      <span class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800">
+                        {{ order.customerSource === 'fb_ads' ? 'Facebook' : 'Instagram' }}
                       </span>
                     </div>
                   </div>
@@ -199,8 +135,8 @@
       <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
       </svg>
-      <h3 class="mt-2 text-sm font-medium text-gray-900">No product data available</h3>
-      <p class="mt-1 text-sm text-gray-500">No invoice lines data found for the selected date range.</p>
+      <h3 class="mt-2 text-sm font-medium text-gray-900">No Meta ads product data available</h3>
+      <p class="mt-1 text-sm text-gray-500">No Facebook or Instagram attributed sales found for the selected date range.</p>
     </div>
   </div>
 </template>
@@ -209,7 +145,11 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useUtilsStore } from '../../stores/utils.js'
 import { useDashboardStore } from '../../stores/dashboard.js'
-import { fetchInvoiceLines, processInvoiceLineData, getProductPerformanceData, getCategoryPerformance } from '../../api/invoiceLines.js'
+import { fetchInvoiceLines, processInvoiceLineData, getProductPerformanceData } from '../../api/invoiceLines.js'
+
+// Import components
+import DashboardHeader from '../shared/DashboardHeader.vue'
+import DataTable from '../shared/DataTable.vue'  // Fixed import
 
 const props = defineProps({
   salesOrderData: {
@@ -230,43 +170,75 @@ const invoiceLinesData = ref([])
 const selectedProduct = ref(null)
 
 // Computed properties
+const fbSalesOrders = computed(() =>
+  props.salesOrderData.filter(order =>
+    order.customer_sumber_info === 'fb_ads' || order.customer_sumber_info === 'ig_ads')
+)
+
 const productPerformanceData = computed(() => {
-  if (!props.salesOrderData.length || !invoiceLinesData.value.length) return []
-  
+  if (!fbSalesOrders.value.length || !invoiceLinesData.value.length) return []
   const processedInvoiceLines = processInvoiceLineData(invoiceLinesData.value)
-  return getProductPerformanceData(props.salesOrderData, processedInvoiceLines)
+  return getProductPerformanceData(fbSalesOrders.value, processedInvoiceLines)
 })
 
-const categoryPerformance = computed(() => {
-  return getCategoryPerformance(productPerformanceData.value)
+// Meta-only computed properties
+const metaProductPerformanceData = computed(() => {
+  return productPerformanceData.value.filter(product => product.fbAttributedOrders > 0)
 })
 
-const topProducts = computed(() => {
-  return productPerformanceData.value.slice(0, 10)
+const metaCategoryPerformance = computed(() => {
+  const categoryMap = new Map()
+  
+  metaProductPerformanceData.value.forEach(product => {
+    const category = product.serviceCategory
+    if (!categoryMap.has(category)) {
+      categoryMap.set(category, {
+        category,
+        metaProducts: 0,
+        fbAttributedOrders: 0,
+        fbAttributedRevenue: 0
+      })
+    }
+    
+    const categoryData = categoryMap.get(category)
+    categoryData.metaProducts += 1
+    categoryData.fbAttributedOrders += product.fbAttributedOrders
+    categoryData.fbAttributedRevenue += product.fbAttributedRevenue
+  })
+  
+  return Array.from(categoryMap.values())
+    .map(category => ({
+      ...category,
+      avgMetaOrderValue: category.fbAttributedOrders > 0 ? category.fbAttributedRevenue / category.fbAttributedOrders : 0
+    }))
+    .sort((a, b) => b.fbAttributedRevenue - a.fbAttributedRevenue)
 })
 
-const totalProducts = computed(() => {
-  return productPerformanceData.value.length
+const topMetaProducts = computed(() => {
+  return metaProductPerformanceData.value
+    .map(product => ({
+      ...product,
+      metaAvgOrderValue: product.fbAttributedOrders > 0 ? product.fbAttributedRevenue / product.fbAttributedOrders : 0,
+      metaOrders: product.orders.filter(order => order.isFromFbAds)
+    }))
+    .sort((a, b) => b.fbAttributedRevenue - a.fbAttributedRevenue)
+    .slice(0, 10)
 })
 
-const totalRevenue = computed(() => {
-  return productPerformanceData.value.reduce((sum, product) => sum + product.totalRevenue, 0)
+const metaAttributedProducts = computed(() => {
+  return metaProductPerformanceData.value.length
 })
 
 const fbAttributedRevenue = computed(() => {
-  return productPerformanceData.value.reduce((sum, product) => sum + product.fbAttributedRevenue, 0)
+  return metaProductPerformanceData.value.reduce((sum, product) => sum + product.fbAttributedRevenue, 0)
 })
 
-const fbAttributionRate = computed(() => {
-  return totalRevenue.value > 0 ? (fbAttributedRevenue.value / totalRevenue.value) * 100 : 0
+const topMetaCategory = computed(() => {
+  return metaCategoryPerformance.value.length > 0 ? metaCategoryPerformance.value[0].category : 'N/A'
 })
 
-const topCategory = computed(() => {
-  return categoryPerformance.value.length > 0 ? categoryPerformance.value[0].category : 'N/A'
-})
-
-const topCategoryRevenue = computed(() => {
-  return categoryPerformance.value.length > 0 ? categoryPerformance.value[0].totalRevenue : 0
+const topMetaCategoryRevenue = computed(() => {
+  return metaCategoryPerformance.value.length > 0 ? metaCategoryPerformance.value[0].fbAttributedRevenue : 0
 })
 
 // Methods
@@ -298,4 +270,59 @@ onMounted(() => {
     loadInvoiceLinesData()
   }
 })
-</script> 
+
+
+// Column definitions with proper formatting
+const categoryColumns = [
+  { key: 'category', label: 'Category', sortable: true },
+  { 
+    key: 'metaProducts', 
+    label: 'Products', 
+    align: 'right',
+    formatter: (value) => formatNumber(value)
+  },
+  { 
+    key: 'fbAttributedOrders', 
+    label: 'Meta Orders', 
+    align: 'right',
+    formatter: (value) => formatNumber(value)
+  },
+  { 
+    key: 'fbAttributedRevenue', 
+    label: 'Meta Revenue', 
+    align: 'right', 
+    cellClass: 'font-medium text-purple-600',
+    formatter: (value) => formatCurrency(value)
+  },
+  { 
+    key: 'avgMetaOrderValue', 
+    label: 'Avg Order Value', 
+    align: 'right',
+    formatter: (value) => formatCurrency(value)
+  }
+]
+
+const productColumns = [
+  { key: 'displayName', label: 'Product/Service', sortable: true },
+  { key: 'serviceCategory', label: 'Category' },
+  { 
+    key: 'fbAttributedOrders', 
+    label: 'Meta Orders', 
+    align: 'right',
+    formatter: (value) => formatNumber(value)
+  },
+  { 
+    key: 'fbAttributedRevenue', 
+    label: 'Meta Revenue', 
+    align: 'right', 
+    cellClass: 'font-medium text-purple-600',
+    formatter: (value) => formatCurrency(value)
+  },
+  { 
+    key: 'metaAvgOrderValue', 
+    label: 'Avg Order Value', 
+    align: 'right',
+    formatter: (value) => formatCurrency(value)
+  }
+]
+</script>
