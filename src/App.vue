@@ -373,6 +373,7 @@ onMounted(async () => {
         <BranchDashboard 
           v-else-if="activeTab === 'branches'"
           :branchPerformanceData="branchPerformanceData"
+          :leadsRatioData="leadsRatioData"
         />
 
         <!-- Product Performance Dashboard -->

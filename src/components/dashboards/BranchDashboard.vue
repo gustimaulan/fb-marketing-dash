@@ -40,8 +40,12 @@
               <span class="font-bold text-green-900">{{ formatCurrency(totalRevenue) }}</span>
             </div>
             <div class="flex justify-between items-center">
+              <span class="text-sm text-green-600">Total Leads:</span>
+              <span class="font-bold text-green-900">{{ formatNumber(props.leadsRatioData?.totalLeads || 0) }}</span>
+            </div>
+            <div class="flex justify-between items-center">
               <span class="text-sm text-green-600">Actual Orders:</span>
-              <span class="font-bold text-green-900">{{ formatNumber(leadsRatioData?.totalPurchases || 0) }}</span>
+              <span class="font-bold text-green-900">{{ formatNumber(totalSalesOrders || 0) }}</span>
             </div>
             <div class="flex justify-between items-center">
               <span class="text-sm text-green-600">Actual ROAS:</span>
@@ -51,8 +55,8 @@
         </div>
 
         <!-- Performance Summary -->
-        <div class="bg-gradient-to-r from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200">
-          <h3 class="text-lg font-medium text-purple-800 mb-4">📊 Performance Summary</h3>
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-lg border border-gray-200">
+          <h3 class="text-lg font-medium text-gray-800 mb-4">📊 Performance Summary</h3>
           <div class="space-y-3">
             <div class="flex justify-between items-center">
               <span class="text-sm text-purple-600">Best Branch ROAS:</span>
@@ -71,7 +75,7 @@
       </div>
 
       <!-- Branch Performance Comparison -->
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div class="grid grid-cols-2 xl:grid-cols-2 gap-8">
         <div v-for="branchData in branchPerformanceData" :key="branchData.branchName" 
              class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <!-- Branch Header -->
@@ -103,6 +107,8 @@
               <div class="text-sm text-blue-600">Allocated Ad Spend (via Leads Ratio)</div>
             </div>
 
+
+
             <!-- Sales Order Data (Actual) -->
             <div class="bg-green-50 p-4 rounded-lg border border-green-200">
               <h5 class="font-semibold text-green-800 mb-3 text-center">✅ Sales Order Data (Actual)</h5>
@@ -111,6 +117,7 @@
                   <span class="text-sm text-green-600">Revenue:</span>
                   <span class="font-bold text-green-900">{{ formatCurrency(branchData.metrics.sales_order.revenue) }}</span>
                 </div>
+                <!-- Removed Total Leads line since it's not branch-specific -->
                 <div class="flex justify-between">
                   <span class="text-sm text-green-600">Orders:</span>
                   <span class="font-bold text-green-900">{{ formatNumber(branchData.metrics.sales_order.orders) }}</span>
@@ -187,6 +194,10 @@ const props = defineProps({
   branchPerformanceData: {
     type: Array,
     default: null
+  },
+  leadsRatioData: {
+    type: Object,
+    default: null
   }
 })
 
@@ -224,16 +235,20 @@ const averageOrderValue = computed(() => {
   return totalOrders > 0 ? totalRevenue.value / totalOrders : 0
 })
 
-// Calculate leads and purchases data from branch metrics  
-const leadsRatioData = computed(() => {
-  if (!props.branchPerformanceData) return { totalLeads: 0, totalPurchases: 0 }
-  
-  const totalPurchases = props.branchPerformanceData.reduce((sum, branch) => {
+// Calculate total sales orders from branch metrics  
+const totalSalesOrders = computed(() => {
+  if (!props.branchPerformanceData) return 0
+  return props.branchPerformanceData.reduce((sum, branch) => {
     return sum + (branch.metrics.sales_order.orders || 0)
   }, 0)
+})
+
+// Calculate leads and purchases summary
+const leadsSummary = computed(() => {
+  if (!props.leadsRatioData) return { totalLeads: 0, totalPurchases: 0 }
   
-  // Set leads as 0 for now since we don't have conversation data per branch
-  const totalLeads = 0
+  const totalPurchases = totalSalesOrders.value
+  const totalLeads = props.leadsRatioData.totalLeads || 0
   
   return { totalLeads, totalPurchases }
 })
@@ -244,7 +259,7 @@ const bestBranchROAS = computed(() => {
 })
 
 const averageCostPerOrder = computed(() => {
-  const totalOrders = leadsRatioData.value.totalPurchases
+  const totalOrders = totalSalesOrders.value
   return totalOrders > 0 ? totalBudget.value / totalOrders : 0
 })
 
@@ -310,4 +325,22 @@ const getBranchLogo = (branchName) => {
   return null
 }
 
-</script> 
+// Helper functions for leads data
+const getBranchLeads = (branchName) => {
+  if (!props.leadsRatioData?.branches) return 0
+  const branch = props.leadsRatioData.branches.find(b => b.name === branchName)
+  return branch?.total || 0
+}
+
+const getBranchCostPerLead = (branchData) => {
+  const leads = getBranchLeads(branchData.branchName)
+  return leads > 0 ? branchData.metrics.spend / leads : 0
+}
+
+const getBranchConversionRate = (branchData) => {
+  const leads = getBranchLeads(branchData.branchName)
+  const orders = branchData.metrics.sales_order.orders
+  return leads > 0 ? (orders / leads) * 100 : 0
+}
+
+</script>
